@@ -137,7 +137,7 @@ host integration.
 - Where an extension lives and how the folder is named: `Extensions/` holds **extension classes only** — per project
   that is `Extensions/ServiceCollectionExtensions.cs`, never a file beside the services it registers, and never a plain
   class that happens to be used by them. Adapting/implementing types stay outside that folder
-  (`LazyResolved.cs` sits at the project root), because a folder named after a language feature must not become a
+  (`LazilyResolved.cs` sits at the project root), because a folder named after a language feature must not become a
   junk drawer. A project name must say what the project contains; a bare `Mirai.Space.Extensions` is untraceable
   ("what does it do?") and was rejected for that reason, while `Mirai.Space.Extensions.<Topic>` (`MVVM`, `Reactive`,
   `Http`, `SignalR`, `Avalonia`) states the topic.
@@ -167,8 +167,25 @@ public partial class MainView : ReactiveUserControl<MainViewModel>
 }
 ```
 
-The `.axaml` root element stays `<Window>` / `<UserControl>`; the generic ReactiveUI base derives from them, so the
-XAML compiler accepts the partial class. `x:DataType` + `Design.DataContext` keep compiled bindings working.
+The `.axaml` root names the **concrete view class itself** — `views:MainWindow` / `views:MainView`, not a framework base
+and not the ReactiveUI base either. Avalonia's XAML compiler populates the instance the class constructor already
+created, so a root type equal to the `x:Class` type is legal (unlike WPF, where the root must be a base class), and the
+visual designer/populator resolves properties against the real class.
+
+```xml
+<views:MainWindow xmlns="https://github.com/avaloniaui"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                  xmlns:views="using:Mirai.Space.UI.Views"
+                  xmlns:vm="using:Mirai.Space.Presentation.ViewModels"
+                  x:Class="Mirai.Space.UI.Views.MainWindow"
+                  x:DataType="vm:MainWindowViewModel"
+                  Title="Mirai.Space">
+    <views:MainView DataContext="{Binding Main}" />
+</views:MainWindow>
+```
+
+`x:DataType` stays: it types the compiled bindings inside the file. No `x:TypeArguments` (the concrete class is closed)
+and no `Design.DataContext` — a view never carries a design-time instance of its view model.
 
 ### One slot, not two: `DataContext` vs `ViewModel`
 

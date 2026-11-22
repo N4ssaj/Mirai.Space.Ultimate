@@ -24,21 +24,21 @@ public static class ServiceCollectionExtensions
 
             var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
             configure(options);
-            return builder.UseSerializer(new JsonApiSerializer(options));
+            return builder.UseSerializer(new JsonRequestSerializer(options));
         }
 
         public IHttpClientBuilder UseJson(JsonSerializerOptions options)
         {
             ArgumentNullException.ThrowIfNull(builder);
 
-            return builder.UseSerializer(new JsonApiSerializer(options));
+            return builder.UseSerializer(new JsonRequestSerializer(options));
         }
 
         public IHttpClientBuilder UseJson(JsonSerializerContext context)
         {
             ArgumentNullException.ThrowIfNull(builder);
 
-            return builder.UseSerializer(new JsonApiSerializer(context));
+            return builder.UseSerializer(new JsonRequestSerializer(context));
         }
     }
 
@@ -57,7 +57,7 @@ public static class ServiceCollectionExtensions
 
             var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
             configure(options);
-            services.AddSingleton<IApiSerializer>(new JsonApiSerializer(options));
+            services.AddSingleton<IRequestSerializer>(new JsonRequestSerializer(options));
             return services;
         }
 
@@ -65,7 +65,7 @@ public static class ServiceCollectionExtensions
         {
             ArgumentNullException.ThrowIfNull(services);
 
-            services.AddSingleton<IApiSerializer>(new JsonApiSerializer(options));
+            services.AddSingleton<IRequestSerializer>(new JsonRequestSerializer(options));
             return services;
         }
 
@@ -73,7 +73,24 @@ public static class ServiceCollectionExtensions
         {
             ArgumentNullException.ThrowIfNull(services);
 
-            services.AddSingleton<IApiSerializer>(new JsonApiSerializer(context));
+            services.AddSingleton<IRequestSerializer>(new JsonRequestSerializer(context));
+            return services;
+        }
+
+        public IServiceCollection AddProblemDetailsErrorHandler()
+        {
+            ArgumentNullException.ThrowIfNull(services);
+
+            services.AddSingleton<IApiErrorHandler>(new ProblemDetailsErrorHandler());
+            return services;
+        }
+
+        public IServiceCollection AddProblemDetailsErrorHandler(JsonSerializerOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(services);
+            ArgumentNullException.ThrowIfNull(options);
+
+            services.AddSingleton<IApiErrorHandler>(new ProblemDetailsErrorHandler(options));
             return services;
         }
     }

@@ -10,11 +10,14 @@ public static class ServiceCollectionExtensions
 {
     extension(IHttpClientBuilder builder)
     {
+        public IHttpClientBuilder UseMessagePack() =>
+            builder.UseMessagePack(MessagePackSerializerOptions.Standard);
+
         public IHttpClientBuilder UseMessagePack(MessagePackSerializerOptions options)
         {
             ArgumentNullException.ThrowIfNull(builder);
 
-            return builder.UseSerializer(new MessagePackApiSerializer(options));
+            return builder.UseSerializer(new MessagePackRequestSerializer(options));
         }
 
         public IHttpClientBuilder UseMessagePack(
@@ -28,11 +31,14 @@ public static class ServiceCollectionExtensions
 
     extension(IServiceCollection services)
     {
+        public IServiceCollection AddMessagePackSerializer() =>
+            services.AddMessagePackSerializer(MessagePackSerializerOptions.Standard);
+
         public IServiceCollection AddMessagePackSerializer(MessagePackSerializerOptions options)
         {
             ArgumentNullException.ThrowIfNull(services);
 
-            services.AddSingleton<IApiSerializer>(new MessagePackApiSerializer(options));
+            services.AddSingleton<IRequestSerializer>(new MessagePackRequestSerializer(options));
             return services;
         }
 

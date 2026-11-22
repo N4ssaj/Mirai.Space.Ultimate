@@ -2,7 +2,7 @@ using Mirai.Space.Extensions.Http.Abstractions;
 
 namespace Mirai.Space.Extensions.Http;
 
-public sealed partial class RequestService
+internal sealed partial class RequestService
 {
     public async Task<TResponse?> PutAsync<TResponse, TBody>(
         string url,

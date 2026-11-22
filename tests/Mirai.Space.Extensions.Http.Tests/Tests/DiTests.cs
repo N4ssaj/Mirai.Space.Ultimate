@@ -1,5 +1,5 @@
 using System.Net;
-using System.Net.Http.Headers;
+using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Mirai.Space.Extensions.Http.Abstractions;
 using Mirai.Space.Extensions.Http.Extensions;
@@ -16,7 +16,7 @@ public sealed class DiTests
         var ct = TestContext.Current.CancellationToken;
         using var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent("""{"id":1,"name":"from-di"}""", System.Text.Encoding.UTF8, "application/json"),
+            Content = new StringContent("""{"id":1,"name":"from-di"}""", Encoding.UTF8, "application/json"),
         });
 
         var services = new ServiceCollection();
@@ -35,19 +35,19 @@ public sealed class DiTests
     }
 
     [Fact]
-    public async Task AddRequestService_NonSuccess_UsesProblemDetailsFactory()
+    public async Task AddRequestService_NonSuccess_UsesProblemDetailsHandler()
     {
         var ct = TestContext.Current.CancellationToken;
         using var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.BadRequest)
         {
             Content = new StringContent(
                 """{"type":"about:blank","title":"Invalid item","status":400,"detail":"id must be positive"}""",
-                System.Text.Encoding.UTF8,
+                Encoding.UTF8,
                 "application/problem+json"),
         });
 
         var services = new ServiceCollection();
-        services.AddProblemDetailsErrorFactory();
+        services.AddProblemDetailsErrorHandler();
         services.AddRequestService<TestClient>()
             .ConfigurePrimaryHttpMessageHandler(() => handler)
             .UseJson();
@@ -57,21 +57,7 @@ public sealed class DiTests
 
         var exception = await Assert.ThrowsAsync<ApiException>(() => client.GetItemAsync(ct));
         Assert.Equal(HttpStatusCode.BadRequest, exception.StatusCode);
-        var problem = Assert.IsType<ApiProblemDetails>(exception.Problem);
+        var problem = Assert.IsType<RequestProblemDetails>(exception.Problem);
         Assert.Equal("Invalid item", problem.Title);
-        Assert.NotNull(exception.ResponseBody);
-    }
-
-    [Fact]
-    public void AddRequestService_RegistersAuthorizationProvider()
-    {
-        var services = new ServiceCollection();
-        services.AddRequestService<TestClient>()
-            .UseJson();
-
-        using var provider = services.BuildServiceProvider();
-
-        Assert.NotNull(provider.GetService<IApiAuthorizationProvider>());
-        Assert.NotNull(provider.GetService<IApiReauthenticator>());
     }
 }

@@ -1,6 +1,6 @@
-namespace Mirai.Space.Extensions.Http.Abstractions;
+namespace Mirai.Space.Extensions.Http;
 
-public static class ApiRequest
+internal static class ApiRequest
 {
     public static HttpRequestMessage Get(string url) => new(HttpMethod.Get, url);
 

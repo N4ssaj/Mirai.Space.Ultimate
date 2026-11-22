@@ -6,7 +6,7 @@ public interface IRequestService
 
     Task<ApiResponse<T>> GetResponseAsync<T>(string url, CancellationToken ct = default);
 
-    Task<StreamedApiResponse> GetStreamAsync(string url, CancellationToken ct = default);
+    Task<ApiResponse> GetStreamAsync(string url, Stream destination, CancellationToken ct = default);
 
     IAsyncEnumerable<T> GetAsyncEnumerable<T>(string url, CancellationToken ct = default);
 
@@ -27,9 +27,13 @@ public interface IRequestService
         TBody body,
         CancellationToken ct = default);
 
-    Task<StreamedApiResponse> PostStreamAsync(string url, CancellationToken ct = default);
+    Task<ApiResponse> PostStreamAsync(string url, Stream destination, CancellationToken ct = default);
 
-    Task<StreamedApiResponse> PostStreamAsync<TBody>(string url, TBody body, CancellationToken ct = default);
+    Task<ApiResponse> PostStreamAsync<TBody>(
+        string url,
+        TBody body,
+        Stream destination,
+        CancellationToken ct = default);
 
     Task<TResponse?> PutAsync<TResponse, TBody>(string url, TBody body, CancellationToken ct = default);
 
@@ -47,7 +51,10 @@ public interface IRequestService
 
     Task<ApiResponse<T>> SendAsync<T>(HttpRequestMessage request, CancellationToken ct = default);
 
-    Task<StreamedApiResponse> SendStreamAsync(HttpRequestMessage request, CancellationToken ct = default);
+    Task<ApiResponse> SendStreamAsync(
+        HttpRequestMessage request,
+        Stream destination,
+        CancellationToken ct = default);
 
     IAsyncEnumerable<T> SendAsyncEnumerable<T>(HttpRequestMessage request, CancellationToken ct = default);
 }

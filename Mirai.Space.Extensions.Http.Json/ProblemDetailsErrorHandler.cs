@@ -1,30 +1,42 @@
 using System.Text.Json;
 using Mirai.Space.Extensions.Http.Abstractions;
 
-namespace Mirai.Space.Extensions.Http;
+namespace Mirai.Space.Extensions.Http.Json;
 
-internal sealed class ApiProblemDetailsErrorFactory : IApiErrorFactory
+internal sealed class ProblemDetailsErrorHandler : IApiErrorHandler
 {
-    private const int MaxBodyLength = 8192;
-    private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
+    private const int DefaultMaxBodyLength = 8192;
+    private static readonly JsonSerializerOptions DefaultOptions = new(JsonSerializerDefaults.Web);
+    private readonly JsonSerializerOptions _options;
+    private readonly int _maxBodyLength;
 
-    public async ValueTask<ApiException> CreateAsync(
+    public ProblemDetailsErrorHandler(
+        JsonSerializerOptions? options = null,
+        int maxBodyLength = DefaultMaxBodyLength)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxBodyLength);
+
+        _options = options ?? DefaultOptions;
+        _maxBodyLength = maxBodyLength;
+    }
+
+    public async ValueTask<ApiException> HandleAsync(
         HttpResponseMessage response,
         CancellationToken ct = default)
     {
         var request = response.RequestMessage;
         var body = await ReadBodyAsync(response, ct).ConfigureAwait(false);
 
-        ApiProblemDetails? problem = null;
+        RequestProblemDetails? problem = null;
         if (body is not null)
         {
             try
             {
-                problem = JsonSerializer.Deserialize<ApiProblemDetails>(body, Options);
+                problem = JsonSerializer.Deserialize<RequestProblemDetails>(body, _options);
             }
             catch (JsonException)
             {
-                // A non-JSON problem body still travels to callers in ResponseBody.
+                // The body is not ProblemDetails; fall back to the status line.
             }
         }
 
@@ -36,13 +48,10 @@ internal sealed class ApiProblemDetailsErrorFactory : IApiErrorFactory
             response.StatusCode,
             request?.Method,
             request?.RequestUri,
-            problem,
-            body);
+            problem);
     }
 
-    private static async ValueTask<string?> ReadBodyAsync(
-        HttpResponseMessage response,
-        CancellationToken ct)
+    private async ValueTask<string?> ReadBodyAsync(HttpResponseMessage response, CancellationToken ct)
     {
         var mediaType = response.Content.Headers.ContentType?.MediaType;
         if (!string.Equals(mediaType, "application/problem+json", StringComparison.OrdinalIgnoreCase)
@@ -53,8 +62,8 @@ internal sealed class ApiProblemDetailsErrorFactory : IApiErrorFactory
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
         using var reader = new StreamReader(stream, leaveOpen: true, detectEncodingFromByteOrderMarks: true);
-        var buffer = new char[MaxBodyLength];
+        var buffer = new char[_maxBodyLength + 1];
         var read = await reader.ReadBlockAsync(buffer, ct).ConfigureAwait(false);
-        return read == 0 ? null : new string(buffer, 0, read);
+        return read == 0 || read > _maxBodyLength ? null : new string(buffer, 0, read);
     }
 }

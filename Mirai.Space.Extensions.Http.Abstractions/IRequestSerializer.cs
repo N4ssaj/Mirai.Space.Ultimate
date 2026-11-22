@@ -1,6 +1,6 @@
 namespace Mirai.Space.Extensions.Http.Abstractions;
 
-public interface IApiSerializer
+public interface IRequestSerializer
 {
     string ContentType { get; }
 

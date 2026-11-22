@@ -2,7 +2,7 @@ using Mirai.Space.Extensions.Http.Abstractions;
 
 namespace Mirai.Space.Extensions.Http;
 
-public sealed partial class RequestService
+internal sealed partial class RequestService
 {
     public async Task<T?> PostAsync<T>(string url, CancellationToken ct = default) =>
         (await SendCoreAsync<T>(ApiRequest.Post(url), ct).ConfigureAwait(false)).Content;
@@ -25,12 +25,16 @@ public sealed partial class RequestService
         CancellationToken ct = default) =>
         SendCoreAsync<TResponse>(ApiRequest.Post(url, CreateContent(body)), ct);
 
-    public Task<StreamedApiResponse> PostStreamAsync(string url, CancellationToken ct = default) =>
-        SendForStreamCoreAsync(ApiRequest.Post(url), disposeRequest: true, ct);
+    public Task<ApiResponse> PostStreamAsync(
+        string url,
+        Stream destination,
+        CancellationToken ct = default) =>
+        SendForStreamCoreAsync(ApiRequest.Post(url), destination, disposeRequest: true, ct);
 
-    public Task<StreamedApiResponse> PostStreamAsync<TBody>(
+    public Task<ApiResponse> PostStreamAsync<TBody>(
         string url,
         TBody body,
+        Stream destination,
         CancellationToken ct = default) =>
-        SendForStreamCoreAsync(ApiRequest.Post(url, CreateContent(body)), disposeRequest: true, ct);
+        SendForStreamCoreAsync(ApiRequest.Post(url, CreateContent(body)), destination, disposeRequest: true, ct);
 }

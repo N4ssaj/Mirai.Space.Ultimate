@@ -1,6 +1,6 @@
 namespace Mirai.Space.Extensions.Http.Abstractions;
 
-public sealed record ApiProblemDetails(
+public sealed record RequestProblemDetails(
     string? Type,
     string? Title,
     int? Status,

@@ -10,17 +10,14 @@ public sealed class ApiException : Exception
 
     public Uri? RequestUri { get; }
 
-    public ApiProblemDetails? Problem { get; }
-
-    public string? ResponseBody { get; }
+    public RequestProblemDetails? Problem { get; }
 
     public ApiException(
         string message,
         HttpStatusCode statusCode,
         HttpMethod? method,
         Uri? requestUri,
-        ApiProblemDetails? problem = null,
-        string? responseBody = null,
+        RequestProblemDetails? problem = null,
         Exception? innerException = null)
         : base(message, innerException)
     {
@@ -28,6 +25,5 @@ public sealed class ApiException : Exception
         Method = method;
         RequestUri = requestUri;
         Problem = problem;
-        ResponseBody = responseBody;
     }
 }

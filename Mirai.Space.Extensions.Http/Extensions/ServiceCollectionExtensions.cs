@@ -2,7 +2,6 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Mirai.Space.Extensions.Http.Abstractions;
-using Mirai.Space.Extensions.Http.Handlers;
 
 namespace Mirai.Space.Extensions.Http.Extensions;
 
@@ -14,12 +13,7 @@ public static class ServiceCollectionExtensions
         {
             ArgumentNullException.ThrowIfNull(services);
 
-            services.TryAddSingleton<IApiErrorFactory, DefaultApiErrorFactory>();
-            services.TryAddSingleton<IApiAuthorizationProvider, NoopApiAuthorizationProvider>();
-            services.TryAddSingleton<IApiReauthenticator, NoopApiReauthenticator>();
-            services.TryAddTransient<ApiAuthorizationHandler>();
-            services.TryAddTransient<ApiReauthenticationHandler>();
-
+            services.TryAddSingleton<IApiErrorHandler, DefaultApiErrorHandler>();
             return services;
         }
 
@@ -30,40 +24,29 @@ public static class ServiceCollectionExtensions
 
             var name = typeof(TClient).FullName!;
 
-            var builder = services.AddHttpClient(name)
-                .AddHttpMessageHandler<ApiReauthenticationHandler>()
-                .AddHttpMessageHandler<ApiAuthorizationHandler>();
-
+            var builder = services.AddHttpClient(name);
             services.AddHttpExtensions();
             services.TryAddTransient<TClient>(sp =>
             {
                 var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(name);
-                var serializer = sp.GetKeyedService<IApiSerializer>(name)
-                    ?? sp.GetRequiredService<IApiSerializer>();
-                var errorFactory = sp.GetKeyedService<IApiErrorFactory>(name)
-                    ?? sp.GetRequiredService<IApiErrorFactory>();
+                var serializer = sp.GetKeyedService<IRequestSerializer>(name)
+                    ?? sp.GetRequiredService<IRequestSerializer>();
+                var errorHandler = sp.GetKeyedService<IApiErrorHandler>(name)
+                    ?? sp.GetRequiredService<IApiErrorHandler>();
 
-                var requests = new RequestService(httpClient, serializer, errorFactory);
+                var requests = new RequestService(httpClient, serializer, errorHandler);
                 return ActivatorUtilities.CreateInstance<TClient>(sp, requests);
             });
 
             return builder;
         }
 
-        public IServiceCollection AddApiErrorFactory<TFactory>()
-            where TFactory : class, IApiErrorFactory
+        public IServiceCollection AddApiErrorHandler<THandler>()
+            where THandler : class, IApiErrorHandler
         {
             ArgumentNullException.ThrowIfNull(services);
 
-            services.AddSingleton<IApiErrorFactory, TFactory>();
-            return services;
-        }
-
-        public IServiceCollection AddProblemDetailsErrorFactory()
-        {
-            ArgumentNullException.ThrowIfNull(services);
-
-            services.AddSingleton<IApiErrorFactory, ApiProblemDetailsErrorFactory>();
+            services.AddSingleton<IApiErrorHandler, THandler>();
             return services;
         }
     }
@@ -71,28 +54,29 @@ public static class ServiceCollectionExtensions
     extension(IHttpClientBuilder builder)
     {
         public IHttpClientBuilder UseSerializer<TSerializer>()
-            where TSerializer : class, IApiSerializer
+            where TSerializer : class, IRequestSerializer
         {
             ArgumentNullException.ThrowIfNull(builder);
 
-            builder.Services.TryAddKeyedSingleton<IApiSerializer, TSerializer>(builder.Name);
+            builder.Services.TryAddKeyedSingleton<IRequestSerializer, TSerializer>(builder.Name);
             return builder;
         }
 
-        public IHttpClientBuilder UseSerializer(IApiSerializer serializer)
+        public IHttpClientBuilder UseSerializer(IRequestSerializer serializer)
         {
             ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(serializer);
 
             builder.Services.TryAddKeyedSingleton(builder.Name, serializer);
             return builder;
         }
 
-        public IHttpClientBuilder UseErrorFactory<TFactory>()
-            where TFactory : class, IApiErrorFactory
+        public IHttpClientBuilder UseErrorHandler<THandler>()
+            where THandler : class, IApiErrorHandler
         {
             ArgumentNullException.ThrowIfNull(builder);
 
-            builder.Services.TryAddKeyedSingleton<IApiErrorFactory, TFactory>(builder.Name);
+            builder.Services.TryAddKeyedSingleton<IApiErrorHandler, THandler>(builder.Name);
             return builder;
         }
     }

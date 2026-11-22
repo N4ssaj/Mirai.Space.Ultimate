@@ -4,22 +4,28 @@ using Mirai.Space.Extensions.Http.Abstractions;
 
 namespace Mirai.Space.Extensions.Http.MessagePack;
 
-public sealed class MessagePackApiSerializer : IApiSerializer
+internal sealed class MessagePackRequestSerializer : IRequestSerializer
 {
     private const string MsgPackContentType = "application/x-msgpack";
+    private const string EventStreamContentType = "text/event-stream";
 
     private readonly MessagePackSerializerOptions _options;
 
     public string ContentType => MsgPackContentType;
 
-    public MessagePackApiSerializer()
+    public MessagePackRequestSerializer()
         : this(MessagePackSerializerOptions.Standard)
     {
     }
 
-    public MessagePackApiSerializer(MessagePackSerializerOptions options)
+    public MessagePackRequestSerializer(MessagePackSerializerOptions options)
     {
         _options = options;
+    }
+
+    public MessagePackRequestSerializer(IFormatterResolver resolver)
+        : this(MessagePackSerializerOptions.Standard.WithResolver(resolver))
+    {
     }
 
     public ReadOnlyMemory<byte> Serialize<T>(T value) =>
@@ -33,6 +39,12 @@ public sealed class MessagePackApiSerializer : IApiSerializer
         string? contentType,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
+        if (string.Equals(contentType, EventStreamContentType, StringComparison.OrdinalIgnoreCase))
+        {
+            ThrowHelper.ThrowNotSupportedException(
+                "SSE is a text transport; MessagePack payloads cannot be streamed over text/event-stream.");
+        }
+
         using var reader = new MessagePackStreamReader(stream, leaveOpen: true);
         while (await reader.ReadAsync(ct).ConfigureAwait(false) is { } message)
         {

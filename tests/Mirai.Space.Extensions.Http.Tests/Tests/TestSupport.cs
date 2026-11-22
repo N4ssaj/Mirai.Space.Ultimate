@@ -1,19 +1,25 @@
-using System.Net;
-using System.Net.Http.Headers;
+using Microsoft.Extensions.DependencyInjection;
 using Mirai.Space.Extensions.Http.Abstractions;
+using Mirai.Space.Extensions.Http.Extensions;
 
 namespace Mirai.Space.Extensions.Http.Tests;
 
-internal sealed class TestErrorFactory : IApiErrorFactory
+internal static class TestHost
 {
-    public ValueTask<ApiException> CreateAsync(HttpResponseMessage response, CancellationToken ct = default)
+    public static (ServiceProvider Provider, TestClient Client) Create(
+        HttpMessageHandler handler,
+        Action<IHttpClientBuilder> configure,
+        Action<IServiceCollection>? configureServices = null)
     {
-        var request = response.RequestMessage;
-        return ValueTask.FromResult(new ApiException(
-            $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}",
-            response.StatusCode,
-            request?.Method,
-            request?.RequestUri));
+        var services = new ServiceCollection();
+        configureServices?.Invoke(services);
+
+        var builder = services.AddRequestService<TestClient>()
+            .ConfigurePrimaryHttpMessageHandler(() => handler);
+        configure(builder);
+
+        var provider = services.BuildServiceProvider();
+        return (provider, provider.GetRequiredService<TestClient>());
     }
 }
 
@@ -27,35 +33,8 @@ internal sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> 
 
 internal sealed class TestClient(IRequestService requests)
 {
+    public IRequestService Requests { get; } = requests;
+
     public Task<TestModel?> GetItemAsync(CancellationToken ct) =>
-        requests.GetAsync<TestModel>("http://localhost/items/1", ct);
-}
-
-public sealed record TestModel(int Id, string Name);
-
-internal sealed class StubAuthorizationProvider(AuthenticationHeaderValue? token) : IApiAuthorizationProvider
-{
-    public AuthenticationHeaderValue? Token { get; set; } = token;
-
-    public ValueTask<AuthenticationHeaderValue?> GetAuthorizationAsync(CancellationToken ct = default) =>
-        ValueTask.FromResult(Token);
-}
-
-internal sealed class StubReauthenticator(
-    StubAuthorizationProvider provider,
-    bool result,
-    string? token = null) : IApiReauthenticator
-{
-    public int Calls { get; private set; }
-
-    public Task<bool> TryReauthenticateAsync(CancellationToken ct = default)
-    {
-        Calls++;
-        if (result && token is not null)
-        {
-            provider.Token = new AuthenticationHeaderValue("Bearer", token);
-        }
-
-        return Task.FromResult(result);
-    }
+        Requests.GetAsync<TestModel>("http://localhost/items/1", ct);
 }
