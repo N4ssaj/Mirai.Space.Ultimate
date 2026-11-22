@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
         <OutputType>Exe</OutputType>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
@@ -16,9 +15,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Mirai.Space.Extensions.Http\Mirai.Space.Extensions.Http.csproj" />
-        <ProjectReference Include="..\Mirai.Space.Extensions.Http.Json\Mirai.Space.Extensions.Http.Json.csproj" />
-        <ProjectReference Include="..\Mirai.Space.Extensions.Http.MessagePack\Mirai.Space.Extensions.Http.MessagePack.csproj" />
+        <ProjectReference Include="..\..\Mirai.Space.Extensions.Http\Mirai.Space.Extensions.Http.csproj" />
+        <ProjectReference Include="..\..\Mirai.Space.Extensions.Http.Json\Mirai.Space.Extensions.Http.Json.csproj" />
+        <ProjectReference Include="..\..\Mirai.Space.Extensions.Http.MessagePack\Mirai.Space.Extensions.Http.MessagePack.csproj" />
     </ItemGroup>
 
 </Project>

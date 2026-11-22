@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using Mirai.Space.Presentation.ViewModels;
 
@@ -9,6 +10,8 @@ public static class ServiceCollectionExtensions
     {
         public IServiceCollection AddPresentation()
         {
+            ArgumentNullException.ThrowIfNull(services);
+
             services.AddSingleton<MainViewModel>();
             services.AddSingleton<MainWindowViewModel>();
 

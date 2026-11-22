@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,28 +11,50 @@ public static class ServiceCollectionExtensions
 {
     extension(IHttpClientBuilder builder)
     {
-        public IHttpClientBuilder UseJson() => builder.UseJson(_ => { });
+        public IHttpClientBuilder UseJson()
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+
+            return builder.UseJson(_ => { });
+        }
 
         public IHttpClientBuilder UseJson(Action<JsonSerializerOptions> configure)
         {
+            ArgumentNullException.ThrowIfNull(builder);
+
             var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
             configure(options);
             return builder.UseSerializer(new JsonApiSerializer(options));
         }
 
-        public IHttpClientBuilder UseJson(JsonSerializerOptions options) =>
-            builder.UseSerializer(new JsonApiSerializer(options));
+        public IHttpClientBuilder UseJson(JsonSerializerOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
 
-        public IHttpClientBuilder UseJson(JsonSerializerContext context) =>
-            builder.UseSerializer(new JsonApiSerializer(context));
+            return builder.UseSerializer(new JsonApiSerializer(options));
+        }
+
+        public IHttpClientBuilder UseJson(JsonSerializerContext context)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+
+            return builder.UseSerializer(new JsonApiSerializer(context));
+        }
     }
 
     extension(IServiceCollection services)
     {
-        public IServiceCollection AddJsonSerializer() => services.AddJsonSerializer(_ => { });
+        public IServiceCollection AddJsonSerializer()
+        {
+            ArgumentNullException.ThrowIfNull(services);
+
+            return services.AddJsonSerializer(_ => { });
+        }
 
         public IServiceCollection AddJsonSerializer(Action<JsonSerializerOptions> configure)
         {
+            ArgumentNullException.ThrowIfNull(services);
+
             var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
             configure(options);
             services.AddSingleton<IApiSerializer>(new JsonApiSerializer(options));
@@ -40,12 +63,16 @@ public static class ServiceCollectionExtensions
 
         public IServiceCollection AddJsonSerializer(JsonSerializerOptions options)
         {
+            ArgumentNullException.ThrowIfNull(services);
+
             services.AddSingleton<IApiSerializer>(new JsonApiSerializer(options));
             return services;
         }
 
         public IServiceCollection AddJsonSerializer(JsonSerializerContext context)
         {
+            ArgumentNullException.ThrowIfNull(services);
+
             services.AddSingleton<IApiSerializer>(new JsonApiSerializer(context));
             return services;
         }

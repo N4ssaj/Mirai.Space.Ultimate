@@ -128,16 +128,16 @@ host integration.
   `Lazy<MainWindowViewModel>`, the single-view branch reads `Lazy<MainViewModel>`, so neither platform constructs the
   other's view model — a WebAssembly build never creates `MainWindowViewModel`.
   `Lazy<T>` is only ever useful for a view model here, so the adapter lives in `Mirai.Space.Extensions.MVVM`
-  (`LazilyResolved.cs` at the project root): it resolves `T` from the provider on the first `Value` read, while the
+  (`LazyResolved.cs` at the project root): it resolves `T` from the provider on the first `Value` read, while the
   container still owns the single instance. `AddMvvmExtensions()` in that project's
-  `Extensions/ServiceCollectionExtensions.cs` registers it as the open generic `Lazy<>`; the desktop host
+  `Extensions/ServiceCollectionExtensions.cs` calls `AddLazy()`, which registers it as the open generic `Lazy<>`; the desktop host
   calls `.AddMvvmExtensions().AddPresentation()`, the browser composition root does the same and then builds
   its provider. `AddPresentation` stays a plain view-model registration, because a layer registers only what it owns.
 - `IServiceProvider` injection is **not** used here — it is a service locator and hides the dependency.
 - Where an extension lives and how the folder is named: `Extensions/` holds **extension classes only** — per project
   that is `Extensions/ServiceCollectionExtensions.cs`, never a file beside the services it registers, and never a plain
   class that happens to be used by them. Adapting/implementing types stay outside that folder
-  (`LazilyResolved.cs` sits at the project root), because a folder named after a language feature must not become a
+  (`LazyResolved.cs` sits at the project root), because a folder named after a language feature must not become a
   junk drawer. A project name must say what the project contains; a bare `Mirai.Space.Extensions` is untraceable
   ("what does it do?") and was rejected for that reason, while `Mirai.Space.Extensions.<Topic>` (`MVVM`, `Reactive`,
   `Http`, `SignalR`, `Avalonia`) states the topic.
@@ -238,7 +238,7 @@ Comments stay quiet:
 | 19 × `NU1507` (two package sources: nuget.org + Avalonia) | CPM without package source mapping | not fixed yet: add `<packageSourceMapping>` to `nuget.config` |
 | Two owners of the view model (`DataContext` **and** `ViewModel` assigned, or `DataContext` inside a view ctor) | `ViewModelPropertySync` mirrors the two properties, so a second assignment is dead weight and hides who owns the pairing | assign only `DataContext`, only in `App` |
 | `CS0310: 'App' must be a non-abstract type with a public parameterless constructor` in `Mirai.Space.Browser` | `AppBuilder.Configure<TApp>()` instantiates the type itself, so it cannot build an `App` that takes constructor dependencies | `AppBuilder.Configure(() => ActivatorUtilities.CreateInstance<App>(provider))` with the browser host's own `ServiceCollection` |
-| `InvalidOperationException: Unable to resolve service for type 'System.Lazy`1[...]'` | `Microsoft.Extensions.DependencyInjection` has no built-in `Lazy<T>` support | call `AddLazySingletons()` from `Mirai.Space.Extensions.MVVM.Extensions` in the host's composition root (it registers `LazilyResolved<T>` as the open-generic `Lazy<>`) |
+| `InvalidOperationException: Unable to resolve service for type 'System.Lazy`1[...]'` | `Microsoft.Extensions.DependencyInjection` has no built-in `Lazy<T>` support | call `AddLazy()` from `Mirai.Space.Extensions.MVVM.Extensions` in the host's composition root (it registers `LazyResolved<T>` as the open-generic `Lazy<>`) |
 
 
 ## Adding a new client project

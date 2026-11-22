@@ -31,7 +31,7 @@
 - DI: один `ServiceCollectionExtensions` на сборку (extension-блоки для `IServiceCollection`
   и `IHttpClientBuilder`); `AddRequestService<TClient>()` возвращает `IHttpClientBuilder`.
 - `RequestService` разбит на partial-файлы по глаголам; публичного `ownsRequest` нет.
-- Тесты лежат в `Mirai.Space.Extensions.Http.Tests/Tests/`; `InternalsVisibleTo` не используется
+- Тесты лежат в `tests/Mirai.Space.Extensions.Http.Tests/Tests/`; `InternalsVisibleTo` не используется
   (снимки ответа создаются публичными `FromMessage`).
 
 ---

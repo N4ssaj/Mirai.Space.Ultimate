@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -9,14 +10,20 @@ public static class ServiceCollectionExtensions
     {
         public IServiceCollection AddMvvmExtensions()
         {
-            services.AddLazySingletons();
+            ArgumentNullException.ThrowIfNull(services);
+
+            services.AddLazy();
 
             return services;
         }
 
-        public IServiceCollection AddLazySingletons()
+        public IServiceCollection AddLazy()
         {
-            services.TryAddSingleton(typeof(Lazy<>), typeof(LazilyResolved<>));
+            ArgumentNullException.ThrowIfNull(services);
+
+            services.AddTransient(typeof(Lazy<>), typeof(LazyResolved<>));
+            services.AddSingleton(typeof(Lazy<>), typeof(LazyResolved<>));
+            services.AddScoped(typeof(Lazy<>), typeof(LazyResolved<>));
 
             return services;
         }

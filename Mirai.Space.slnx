@@ -4,6 +4,10 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/Client/">
     <Project Path="Mirai.Space.Application/Mirai.Space.Application.csproj" />
@@ -28,7 +32,6 @@
     <Project Path="Mirai.Space.Extensions.Http.Abstractions/Mirai.Space.Extensions.Http.Abstractions.csproj" />
     <Project Path="Mirai.Space.Extensions.Http.Json/Mirai.Space.Extensions.Http.Json.csproj" />
     <Project Path="Mirai.Space.Extensions.Http.MessagePack/Mirai.Space.Extensions.Http.MessagePack.csproj" />
-    <Project Path="Mirai.Space.Extensions.Http.Tests/Mirai.Space.Extensions.Http.Tests.csproj" />
     <Project Path="Mirai.Space.Extensions.Http/Mirai.Space.Extensions.Http.csproj" />
     <Project Path="Mirai.Space.Extensions.MVVM/Mirai.Space.Extensions.MVVM.csproj" />
     <Project Path="Mirai.Space.Extensions.Reactive/Mirai.Space.Extensions.Reactive.csproj" />
@@ -37,5 +40,8 @@
   <Folder Name="/src/Shared/">
     <Project Path="Mirai.Space.Contracts/Mirai.Space.Contracts.csproj" />
     <Project Path="Mirai.Space.Shared/Mirai.Space.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Mirai.Space.Extensions.Http.Tests/Mirai.Space.Extensions.Http.Tests.csproj" />
   </Folder>
 </Solution>
