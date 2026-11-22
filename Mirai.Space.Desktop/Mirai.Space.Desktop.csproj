@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia.Desktop"/>
+        <PackageReference Include="Avalonia.Fonts.Inter"/>
+        <PackageReference Include="CP.Extensions.Hosting.Avalonia"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting"/>
+        <PackageReference Include="ReactiveUI.Avalonia"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Mirai.Space.Application\Mirai.Space.Application.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Contracts\Mirai.Space.Contracts.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Core\Mirai.Space.Core.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Extensions.Avalonia\Mirai.Space.Extensions.Avalonia.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Extensions.Http\Mirai.Space.Extensions.Http.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Extensions.Http.Json\Mirai.Space.Extensions.Http.Json.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Extensions.Http.MessagePack\Mirai.Space.Extensions.Http.MessagePack.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Extensions.MVVM\Mirai.Space.Extensions.MVVM.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Extensions.Reactive\Mirai.Space.Extensions.Reactive.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Extensions.SignalR\Mirai.Space.Extensions.SignalR.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Platform\Mirai.Space.Platform.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Platform.Win\Mirai.Space.Platform.Win.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Presentation\Mirai.Space.Presentation.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Realtime\Mirai.Space.Realtime.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Request\Mirai.Space.Request.csproj" />
+        <ProjectReference Include="..\Mirai.Space.Shared\Mirai.Space.Shared.csproj" />
+        <ProjectReference Include="..\Mirai.Space.UI\Mirai.Space.UI.csproj" />
+    </ItemGroup>
+</Project>

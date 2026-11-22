@@ -1,0 +1,41 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Client/">
+    <Project Path="Mirai.Space.Application/Mirai.Space.Application.csproj" />
+    <Project Path="Mirai.Space.Core/Mirai.Space.Core.csproj" />
+    <Project Path="Mirai.Space.Presentation/Mirai.Space.Presentation.csproj" />
+    <Project Path="Mirai.Space.UI/Mirai.Space.UI.csproj" />
+  </Folder>
+  <Folder Name="/src/Client/Hosts/">
+    <Project Path="Mirai.Space.Browser/Mirai.Space.Browser.csproj" />
+    <Project Path="Mirai.Space.Desktop/Mirai.Space.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/src/Client/Infrastructure/">
+    <Project Path="Mirai.Space.Realtime/Mirai.Space.Realtime.csproj" />
+    <Project Path="Mirai.Space.Request/Mirai.Space.Request.csproj" />
+  </Folder>
+  <Folder Name="/src/Client/Platforms/">
+    <Project Path="Mirai.Space.Platform.Win/Mirai.Space.Platform.Win.csproj" />
+    <Project Path="Mirai.Space.Platform/Mirai.Space.Platform.csproj" />
+  </Folder>
+  <Folder Name="/src/Extensions/">
+    <Project Path="Mirai.Space.Extensions.Avalonia/Mirai.Space.Extensions.Avalonia.csproj" />
+    <Project Path="Mirai.Space.Extensions.Http.Abstractions/Mirai.Space.Extensions.Http.Abstractions.csproj" />
+    <Project Path="Mirai.Space.Extensions.Http.Json/Mirai.Space.Extensions.Http.Json.csproj" />
+    <Project Path="Mirai.Space.Extensions.Http.MessagePack/Mirai.Space.Extensions.Http.MessagePack.csproj" />
+    <Project Path="Mirai.Space.Extensions.Http.Tests/Mirai.Space.Extensions.Http.Tests.csproj" />
+    <Project Path="Mirai.Space.Extensions.Http/Mirai.Space.Extensions.Http.csproj" />
+    <Project Path="Mirai.Space.Extensions.MVVM/Mirai.Space.Extensions.MVVM.csproj" />
+    <Project Path="Mirai.Space.Extensions.Reactive/Mirai.Space.Extensions.Reactive.csproj" />
+    <Project Path="Mirai.Space.Extensions.SignalR/Mirai.Space.Extensions.SignalR.csproj" />
+  </Folder>
+  <Folder Name="/src/Shared/">
+    <Project Path="Mirai.Space.Contracts/Mirai.Space.Contracts.csproj" />
+    <Project Path="Mirai.Space.Shared/Mirai.Space.Shared.csproj" />
+  </Folder>
+</Solution>
