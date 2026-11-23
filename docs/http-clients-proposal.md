@@ -16,23 +16,46 @@
 
 Документ ниже — исходное предложение. Код после ревью отличается в следующем:
 
-- `ApiStreamResponse` переименован в `StreamedApiResponse`; владение ответом/потоком и
-  потокобезопасный `Dispose`/`DisposeAsync` живут в `Http.Abstractions`.
-- Ошибка одна: `ApiException` несёт `StatusCode`/`Method`/`RequestUri`, `ApiProblemDetails`
-  и `ResponseBody`. `ApiProblemDetails` и разбор ProblemDetails перенесены в ядро (`Http`),
-  `IApiErrorHandler` заменён на `IApiErrorFactory`; провайдер сериализации больше не владеет
-  обработкой ошибок.
-- Авторизация: `IApiAuthorizationProvider` + `ApiAuthorizationHandler`, который всегда
-  выставляет (и очищает) заголовок; 401-повтор — отдельный `ApiReauthenticationHandler` с
-  явным whitelist повторяемых тел. `IApiSession`/session event/`OnResponseAsync` удалены.
-- `IRequestSerializer.MediaType` переименован в `ContentType`; сериализаторы не проверяют
-  media type ответа. JSON/MessagePack выбираются на конкретном клиенте через
-  `UseJson()`/`UseMessagePack()`; глобальной регистрации `IRequestSerializer` в хосте нет.
+- JSON — часть базового пакета: `Mirai.Space.Extensions.Http.Json` удалён, `JsonRequestSerializer`
+  и его DI-расширения живут в `Mirai.Space.Extensions.Http`. JSON зарегистрирован по умолчанию;
+  `ConfigureJson(...)` нужен только для настройки (перегрузки с options/context/configure); `ConfigureJson()` без
+  параметров и все `AddJsonSerializer(...)` удалены — JSON уже включён по умолчанию, настройка идёт через
+  `ConfigureJson(...)` на конкретном клиенте (глобальный fallback заменяется регистрацией `IRequestSerializer` в DI).
+- Публичные типы приведены к семейству `Request*`: `RequestResponse`, `RequestResponse<T>`,
+  `RequestException`, `IRequestErrorHandler`, `DefaultRequestErrorHandler`. `Api*`-типов в HTTP-слое нет.
+- Владение потоком: `StreamedApiResponse` удалён. Потоковые методы принимают `Stream destination`
+  (владелец — вызывающий код), копируют тело и возвращают `RequestResponse` со статусом/заголовками;
+  `HttpResponseMessage` диспозится внутри сервиса.
+- Ошибка одна: `RequestException` несёт `StatusCode`/`Method`/`RequestUri`; тела ответа в исключении
+  нет. `IRequestErrorHandler.HandleAsync(RequestException, ct)` только обрабатывает (может
+  залогировать/бросить); исключение создаёт `RequestService`. Разбор ProblemDetails отложен
+  (m02134): `RequestProblemDetails`, `IRequestProblemDetailsReader` и `AddProblemDetailsReader`
+  удалены до следующего ревью API.
+- Авторизация удалена из v1 полностью: нет `IApiAuthorizationProvider`, `ApiAuthorizationHandler`,
+  `IApiReauthenticator`, `IApiReauthenticationHandler`, `IApiSession`.
+- `IRequestSerializer.ContentType` (не `MediaType`); сериализаторы не проверяют media type ответа.
+  JSON/MessagePack выбираются на конкретном клиенте через `ConfigureJson(...)`/`UseMessagePack()`; глобальных
+  `AddJsonSerializer(...)`/`AddRequestErrorHandler(...)` нет — JSON включён по умолчанию, fallback
+  заменяется прямой регистрацией `IRequestSerializer`/`IRequestErrorHandler` в DI. `UseSerializer<TSerializer>()`/
+  `UseSerializer(instance)` остаётся общим хуком для кастомного сериализатора; `ConfigureJson`/`UseMessagePack` —
+  удобные обёртки над ним. Отдельного глобального `AddMessagePackSerializer()` нет: MessagePack всегда
+  opt-in на конкретном клиенте.
 - DI: один `ServiceCollectionExtensions` на сборку (extension-блоки для `IServiceCollection`
-  и `IHttpClientBuilder`); `AddRequestService<TClient>()` возвращает `IHttpClientBuilder`.
-- `RequestService` разбит на partial-файлы по глаголам; публичного `ownsRequest` нет.
-- Тесты лежат в `tests/Mirai.Space.Extensions.Http.Tests/Tests/`; `InternalsVisibleTo` не используется
-  (снимки ответа создаются публичными `FromMessage`).
+  и `IHttpClientBuilder`); `AddRequestService<TClient>()` возвращает `IHttpClientBuilder`, регистрирует
+  keyed `IRequestService` и transient `TClient`. `AddHttpExtensions` удалён.
+- `RequestService` разбит на partial-файлы по глаголам: `Get`, `Head`, `Options`, `Post`, `Put`,
+  `Patch`, `Delete`, `Send`; флага `disposeRequest` нет — высокоуровневые методы диспозят свой
+  request, escape hatches оставляют `HttpRequestMessage` вызывающему. `using var request = ...` стоит
+  в публичном методе, рядом с объявлением запроса, а не в core; сырая отправка инлайнится
+  (`_httpClient.SendAsync(..., HttpCompletionOption.ResponseHeadersRead, ct)`), без промежуточного
+  `SendCoreAsync`; чтение — `ReadResponseAsync<T>`; `CreateRequest` создаёт запрос без тела,
+  `CreateRequestWithBody<TBody>` сериализует тело, поэтому вложенного `CreateContent(body)` нет.
+- `IRequestService` содержит 25 методов: добавлены `PostResponseAsync<TResponse>`,
+  `PostResponseAsync<TResponse, TBody>`, `PutResponseAsync<TResponse, TBody>`,
+  `PatchResponseAsync<TResponse, TBody>`, `DeleteResponseAsync<T>`.
+- Тесты лежат в `tests/Mirai.Space.Extensions.Http.Tests/Tests/`; `InternalsVisibleTo` не используется:
+  фабрики `RequestResponse`/`RequestException` живут в `Mirai.Space.Extensions.Http`, а Abstractions
+  не ссылается на `HttpResponseMessage` (кроме escape-hatch `HttpRequestMessage` в `IRequestService`).
 
 ---
 
@@ -152,8 +175,8 @@ Mirai.Space.Extensions.Http.Json      Mirai.Space.Extensions.Http.MessagePack
 |---|---|---|
 | `Mirai.Space.Extensions.Http.Abstractions` | `IRequestService`, `IRequestSerializer`, `IApiErrorHandler`, `IApiSession`, `IApiReauthenticator`, `ApiRequest`, `ApiResponse`/`ApiResponse<T>`, `ApiStreamResponse`, `ApiException` | нет (только BCL) |
 | `Mirai.Space.Extensions.Http` | `RequestService`, `DefaultApiErrorHandler`, `ApiSession`, `ApiSessionHandler`, `ApiReauthenticationHandler`, `NoopApiReauthenticator`, DI-extensions | `Mirai.Space.Extensions.Http.Abstractions`, `Microsoft.Extensions.Http`, `Microsoft.Extensions.DependencyInjection.Abstractions`, `Microsoft.Extensions.Logging.Abstractions` |
-| `Mirai.Space.Extensions.Http.Json` | `JsonRequestSerializer`, `ApiProblemDetails`, `ApiProblemException`, `ProblemDetailsApiErrorHandler`, `UseJson`, `AddJsonSerializer` | `Mirai.Space.Extensions.Http` (STJ и `System.Net.Http.Json` — in-box в net10.0) |
-| `Mirai.Space.Extensions.Http.MessagePack` | `MessagePackRequestSerializer`, `UseMessagePack`, `AddMessagePackSerializer` | `Mirai.Space.Extensions.Http`, `MessagePack` 3.1.12 |
+| `Mirai.Space.Extensions.Http.Json` | `JsonRequestSerializer`, `ApiProblemDetails`, `ApiProblemException`, `ProblemDetailsApiErrorHandler`, `ConfigureJson`, `AddJsonSerializer` | `Mirai.Space.Extensions.Http` (STJ и `System.Net.Http.Json` — in-box в net10.0) |
+| `Mirai.Space.Extensions.Http.MessagePack` | `MessagePackRequestSerializer`, `UseMessagePack` | `Mirai.Space.Extensions.Http`, `MessagePack` 3.1.12 |
 
 Почему отдельный `Extensions.Http.Abstractions` (решение владельца, m00562):
 
@@ -163,8 +186,10 @@ Mirai.Space.Extensions.Http.Json      Mirai.Space.Extensions.Http.MessagePack
   где живут `RequestService` и DI;
 - namespace у всех проектов остаётся единым — `Mirai.Space.Extensions.Http`, поэтому перенос
   файлов не меняет `using` у потребителей;
-- внутренние фабрики (`ApiResponse.FromMessage`, конструктор `ApiStreamResponse`) остаются
-  `internal`, ядро получает к ним доступ через `InternalsVisibleTo("Mirai.Space.Extensions.Http")`.
+- преобразования — C# 14 extension-методы `response.ToRequestResponse()` / `response.ToRequestResponse(content)` /
+  `response.ToRequestException(request)` в `RequestResponseExtensions` и `RequestExceptionExtensions`, живут в `Mirai.Space.Extensions.Http`;
+  `RequestResponse` имеет публичный конструктор от готовых словарей заголовков, Abstractions не знает
+  `HttpResponseMessage`; `InternalsVisibleTo` не нужен.
 
 ### Что делать с существующими проектами
 
@@ -212,7 +237,7 @@ public interface IRequestService
     Task<ApiResponse<T>> GetResponseAsync<T>(string url, CancellationToken ct = default);
 
     /// <summary>GET, тело не читается: поток отдаётся как есть. Dispose закрывает и поток, и ответ.</summary>
-    Task<ApiStreamResponse> GetStreamAsync(string url, CancellationToken ct = default);
+    Task<ApiStreamResponse> DownloadAsync(string url, CancellationToken ct = default);
 
     /// <summary>GET + потоковая десериализация по Content-Type (JSON-массив / NDJSON / SSE / MessagePack).</summary>
     IAsyncEnumerable<T> GetAsyncEnumerable<T>(string url, CancellationToken ct = default);
@@ -230,8 +255,8 @@ public interface IRequestService
     Task PostAsync(string url, CancellationToken ct = default);
     Task PostAsync<TBody>(string url, TBody body, CancellationToken ct = default);
     Task<ApiResponse<TResponse>> PostResponseAsync<TResponse, TBody>(string url, TBody body, CancellationToken ct = default);
-    Task<ApiStreamResponse> PostStreamAsync(string url, CancellationToken ct = default);
-    Task<ApiStreamResponse> PostStreamAsync<TBody>(string url, TBody body, CancellationToken ct = default);
+    Task<ApiStreamResponse> PostToStreamAsync(string url, CancellationToken ct = default);
+    Task<ApiStreamResponse> PostToStreamAsync<TBody>(string url, TBody body, CancellationToken ct = default);
 
     // ---------- PUT ----------
     Task<TResponse?> PutAsync<TResponse, TBody>(string url, TBody body, CancellationToken ct = default);
@@ -269,7 +294,7 @@ public interface IRequestService
   компиляторно-сгенерированный итератор умеет смёржить токен из `WithCancellation` с параметром.
 - **`Task<T?>` для `T`-структур** — это не `Nullable<T>`: 204 No Content даст `default(T)`.
 - **Пустое тело** (`204`, `205`, `Content-Length: 0`) в `GetAsync<T>`/`PostAsync<T>` даёт `null`
-  (ссылочный `T`) или `default(T)`; `GetStreamAsync` даёт `Stream.Null` (кейс `UploadGet`, где
+  (ссылочный `T`) или `default(T)`; `DownloadAsync` даёт `Stream.Null` (кейс `UploadGet`, где
   раньше возвращался `null`).
 - **`SendAsync`** не бросает на не-2xx мимо обработчика: обработчик вызывается всегда.
 - **`ApiStreamResponse.Content`** владеет соединением; после `Dispose` читать его нельзя.
@@ -500,14 +525,14 @@ public static class RequestServiceBuilderExtensions
 public static class JsonHttpClientBuilderExtensions
 {
     /// <summary>Сериализатор для этого клиента. Опции создаются и замораживаются здесь же.</summary>
-    public static IHttpClientBuilder UseJson(this IHttpClientBuilder builder, Action<JsonSerializerOptions>? configure = null);
-    public static IHttpClientBuilder UseJson(this IHttpClientBuilder builder, JsonSerializerOptions options);
-    public static IHttpClientBuilder UseJson(this IHttpClientBuilder builder, JsonSerializerContext context);
+    public static IHttpClientBuilder ConfigureJson(this IHttpClientBuilder builder, Action<JsonSerializerOptions>? configure = null);
+    public static IHttpClientBuilder ConfigureJson(this IHttpClientBuilder builder, JsonSerializerOptions options);
+    public static IHttpClientBuilder ConfigureJson(this IHttpClientBuilder builder, JsonSerializerContext context);
 }
 
 public static class JsonServiceCollectionExtensions
 {
-    /// <summary>Глобальный сериализатор по умолчанию (fallback для клиентов без UseJson).</summary>
+    /// <summary>Глобальный сериализатор по умолчанию (fallback для клиентов без ConfigureJson).</summary>
     public static IServiceCollection AddJsonSerializer(this IServiceCollection services, Action<JsonSerializerOptions>? configure = null);
     public static IServiceCollection AddJsonSerializer(this IServiceCollection services, JsonSerializerOptions options);
     public static IServiceCollection AddJsonSerializer(this IServiceCollection services, JsonSerializerContext context);
@@ -519,6 +544,9 @@ public static class JsonServiceCollectionExtensions
 // .Http.MessagePack
 public static class MessagePackHttpClientBuilderExtensions
 {
+    /// <summary>Standard options.</summary>
+    public static IHttpClientBuilder UseMessagePack(this IHttpClientBuilder builder);
+
     /// <summary>Опции MessagePack иммутабельны — принимаем готовый объект.</summary>
     public static IHttpClientBuilder UseMessagePack(this IHttpClientBuilder builder, MessagePackSerializerOptions options);
 
@@ -527,12 +555,6 @@ public static class MessagePackHttpClientBuilderExtensions
     /// Ровно как в первом раунде обсуждения.
     /// </summary>
     public static IHttpClientBuilder UseMessagePack(this IHttpClientBuilder builder, Func<MessagePackSerializerOptions, MessagePackSerializerOptions> configure);
-}
-
-public static class MessagePackServiceCollectionExtensions
-{
-    public static IServiceCollection AddMessagePackSerializer(this IServiceCollection services, MessagePackSerializerOptions options);
-    public static IServiceCollection AddMessagePackSerializer(this IServiceCollection services, Func<MessagePackSerializerOptions, MessagePackSerializerOptions> configure);
 }
 ```
 
@@ -558,7 +580,7 @@ services.AddApiErrorHandler<SputnikApiErrorHandler>();                   // бы
 
 services.AddRequestService<AboutRequestService>()
     .ConfigureHttpClient(c => c.BaseAddress = new Uri(apiBase))
-    .UseJson(o => o.AddJsonContexts())                 // source-gen контексты
+    .ConfigureJson(o => o.AddJsonContexts())                 // source-gen контексты
     .AddHttpMessageHandler<ApiReauthenticationHandler>()   // внешний: 401 → reauth → retry
     .AddHttpMessageHandler<ApiSessionHandler>();           // внутренний: свежий Authorization
 
@@ -570,7 +592,7 @@ services.AddRequestService<FilesRequestService>()
 // SSE: отдельный клиент без таймаута, отмена — только через ct
 services.AddRequestService<NotificationsStreamService>()
     .ConfigureHttpClient(c => { c.BaseAddress = new Uri(apiBase); c.Timeout = Timeout.InfiniteTimeSpan; })
-    .UseJson(_ => { });
+    .ConfigureJson(_ => { });
 
 // Использование
 var about = await aboutRequests.GetAsync(ct);                          // AboutModel?
@@ -581,7 +603,7 @@ await foreach (var item in requests.GetAsyncEnumerable<ItemModel>(Urls.Items, ct
 var auth = await requests.PostResponseAsync<AuthModel, LoginModel>(Urls.Login, model, ct);
 var token = auth.Headers["X-Auth-Token"][0];                           // снимок живёт после dispose
 
-await using var file = await requests.GetStreamAsync($"{Urls.Files}/{id}", ct);
+await using var file = await requests.DownloadAsync($"{Urls.Files}/{id}", ct);
 await file.Content.CopyToAsync(target, ct);                            // Dispose закроет ответ
 
 // multipart + низкий уровень (escape hatch)
@@ -602,7 +624,7 @@ var created = await requests.SendAsync<FileModel>(upload, ct);
 | `GetAsync<T>`, `PostAsync<T>`, … | ядро | сразу после десериализации (`using`) | `T?` |
 | `GetResponseAsync<T>`, `PostResponseAsync<T,TBody>` | ядро | сразу после чтения тела | `ApiResponse<T>` (статус + снимок заголовков + тело) |
 | `HeadAsync`, `OptionsAsync`, `SendAsync` | ядро | сразу после снятия заголовков | `ApiResponse` |
-| `GetStreamAsync`, `PostStreamAsync`, `SendForStreamAsync` | **вызывающий** | `Dispose`/`await using` обёртки | `ApiStreamResponse.Content` |
+| `DownloadAsync`, `PostToStreamAsync`, `SendForStreamAsync` | **вызывающий** | `Dispose`/`await using` обёртки | `ApiStreamResponse.Content` |
 | `GetAsyncEnumerable<T>`, `SendAsyncEnumerable<T>` | итератор | конец перечисления, `break`, отмена, исключение | элементы `T` |
 | не-2xx (любой метод) | ядро | `finally` до `throw` | `ApiException` (или наследник) |
 
@@ -778,7 +800,7 @@ if (mediaType is "text/event-stream")
 
 ### 8.3 Поток ответа
 
-`GetStreamAsync` использует `HttpCompletionOption.ResponseHeadersRead` и отдаёт
+`DownloadAsync` использует `HttpCompletionOption.ResponseHeadersRead` и отдаёт
 `ApiStreamResponse`, который владеет `HttpResponseMessage`. Пустое тело → `Stream.Null`
 (обёртка всё равно диспозится). `ApiStreamResponse` реализует и `IDisposable`, и `IAsyncDisposable`
 (второй — для `await using` без блокировки на сетевом потоке).
@@ -795,7 +817,7 @@ if (mediaType is "text/event-stream")
   Отличить «массив объектов» от array-encoded объекта (`[MessagePackObject]` по умолчанию
   сериализуется в массив) по первому байту нельзя, поэтому `NotSupportedException` не бросаем:
   сервер шлёт последовательность структур (рекомендуется), а для массива ошибка десериализации
-  штатная — буферизуйте через `GetStreamAsync`.
+  штатная — буферизуйте через `DownloadAsync`.
 - **Source-gen резолверов в MessagePack 3.1.12 нет.** Атрибут `[GeneratedMessagePackResolver]`
   присутствует в `MessagePack.dll`, но генератор в пакет **не входит** (в пакете только `lib/*`,
   без `analyzers/`), а отдельный пакет `MessagePack.SourceGenerator` существует лишь в версиях
@@ -854,7 +876,7 @@ var uploaded = await requests.SendAsync<FileModel>(request, ct);   // SendAsync<
 | 4 | Не-2xx: обработчик вызван ровно один раз, получил живой ответ, ответ диспозен до `throw` |
 | 5 | `ApiResponse.Headers`: case-insensitive, значения — копии; после `Dispose` ответа снимок читается |
 | 6 | `HeadAsync`/`OptionsAsync`: тело не читается (`Content` не трогали — проверка через stub) |
-| 7 | `GetStreamAsync`: `ResponseHeadersRead`, `Dispose` обёртки диспозит поток и ответ; повторный `Dispose` — no-op |
+| 7 | `DownloadAsync`: `ResponseHeadersRead`, `Dispose` обёртки диспозит поток и ответ; повторный `Dispose` — no-op |
 | 8 | `GetAsyncEnumerable<T>`: ответ диспозится при `break`, при исключении в теле цикла и при отмене |
 | 9 | `ct` доходит до `HttpMessageHandler.SendAsync` (отмена до и во время чтения) |
 | 10 | `ApiRequest.*` выставляют метод/URL; `Post(url, null)` не создаёт content |
@@ -862,7 +884,7 @@ var uploaded = await requests.SendAsync<FileModel>(request, ct);   // SendAsync<
 | 12 | `ApiSessionHandler`: `Authorization` подставляется/не подставляется при пустой сессии; `OnResponseAsync` вызывается |
 | 13 | `ApiReauthenticationHandler`: 401 → reauth(true) → ровно один повтор с новым заголовком; reauth(false) → исключение; 401 на повторном ответе не зацикливается |
 | 14 | `ApiReauthenticationHandler`: тело-`StreamContent` не повторяется (один запрос), логируется предупреждение |
-| 15 | DI: `AddRequestService<T>()` резолвит `TClient` с `IRequestService`; `UseJson` переопределяет сериализатор только для своего клиента; fallback на глобальный; отсутствие сериализатора → понятный `InvalidOperationException` |
+| 15 | DI: `AddRequestService<T>()` резолвит `TClient` с `IRequestService`; `ConfigureJson` переопределяет сериализатор только для своего клиента; fallback на глобальный; отсутствие сериализатора → понятный `InvalidOperationException` |
 | 16 | DI: `ConfigureHttpClient` и `AddHttpMessageHandler` реально применяются (BaseAddress, кастомный хедер) |
 | 17 | `ApiSession`: `Set/Clear` + `Changed` (потокобезопасность — параллельные `Set`) |
 
@@ -958,7 +980,7 @@ var uploaded = await requests.SendAsync<FileModel>(request, ct);   // SendAsync<
 
 Шаг 2 — JSON-сериализатор
 
-- `JsonRequestSerializer` (массив + NDJSON + SSE), `UseJson`, `AddJsonSerializer`, `ProblemDetailsApiErrorHandler`.
+- `JsonRequestSerializer` (массив + NDJSON + SSE), `ConfigureJson`, `AddJsonSerializer`, `ProblemDetailsApiErrorHandler`.
 - **чекпоинт**: `Http.Json.Tests` зелёные; SSE-тест на многострочный `data:`; NDJSON-тест.
 
 Шаг 3 — полный набор методов
@@ -978,7 +1000,7 @@ var uploaded = await requests.SendAsync<FileModel>(request, ct);   // SendAsync<
 
 Шаг 6 — MessagePack
 
-- `MessagePackRequestSerializer`, `UseMessagePack`, `AddMessagePackSerializer`; `PackageVersion` для `MessagePack`.
+- `MessagePackRequestSerializer`, `UseMessagePack`; `PackageVersion` для `MessagePack`.
 - **чекпоинт**: `Http.MessagePack.Tests` зелёные, ограничение по массиву задокументировано в README.
 
 Шаг 7 — интеграционные тесты + README
@@ -1061,10 +1083,10 @@ JSON/MessagePack и сетевого I/O шум; (г) владение `HttpResp
 |---|---|
 | `ActivatorUtilities` не находит конструктор `TClient` | правило: `TClient` — `sealed class` с одним публичным конструктором `(IRequestService …)`; тест DI на эталонном сервисе |
 | Двойная регистрация `TClient`/сериализатора | `TryAddTransient` для `TClient`, `TryAddKeyedSingleton` для serializer/handler (первая регистрация выигрывает) — задокументировать |
-| Забытый `UseJson` → клиент без сериализатора | явный `InvalidOperationException` с именем клиента и подсказкой («вызовите UseJson/AddJsonSerializer») |
+| Забытый `ConfigureJson` → клиент без сериализатора | явный `InvalidOperationException` с именем клиента и подсказкой («вызовите ConfigureJson/AddJsonSerializer») |
 | Стриминг и retry-политики несовместимы | в README и в примерах: для SSE/stream — без retry, `Timeout.InfiniteTimeSpan` |
 | SSE-клиент «висит» при недоступном сервере | `ConnectTimeout`/`AttemptTimeout` в resilience или отдельный `HttpClient.Timeout` для не-SSE части |
-| MessagePack-массив не стримится | документированное ограничение: `ReadAsync` отдаёт массив одним сообщением; буферизация через `GetStreamAsync`, без `NotSupportedException` |
+| MessagePack-массив не стримится | документированное ограничение: `ReadAsync` отдаёт массив одним сообщением; буферизация через `DownloadAsync`, без `NotSupportedException` |
 | `ApiStreamResponse` забыли задиспозить | анализатор/ревью: `await using`; `Content` не отдаём как `Stream` напрямую из методов |
 | `JsonSerializerOptions` мутируют после регистрации | копия в `JsonRequestSerializer(options)`; `MakeReadOnly()` не вызываем — без `TypeInfoResolver` он бросает `InvalidOperationException` |
 | Публичный API разрастается | правило: каждый метод добавлен только с тестом и сценарием; `IRequestService` — 19 методов + 4 escape hatch, дальше — обоснование |
@@ -1082,9 +1104,9 @@ JSON/MessagePack и сетевого I/O шум; (г) владение `HttpResp
 | `Update<TModel>(url, model)` | `PostAsync(url, model)` |
 | `Post<T>(url)` / `Post<T,TModel>` | `PostAsync<T>(url)` / `PostAsync<T, TModel>(url, model)` |
 | `Upload` / `Upload<T>` | `SendAsync(ApiRequest.Post(url, form))` / `SendAsync<T>(…)` |
-| `UploadGet` / `Download` | `PostStreamAsync(url, body)` / `GetStreamAsync(url)` |
-| `Download<TModel>` | `PostStreamAsync(url, model)` |
+| `UploadGet` / `Download` | `PostToStreamAsync(url, body)` / `DownloadAsync(url)` |
+| `Download<TModel>` | `PostToStreamAsync(url, model)` |
 | `ThrowException` | `IApiErrorHandler` (DI), сообщения сохраняет `SputnikApiErrorHandler` |
 | статический `LogProvider` | `ILogger<T>` из DI |
-| `JsonSerializerOptions` + `AddJsonContexts()` | `UseJson(o => o.AddJsonContexts())` (source-gen контексты) |
+| `JsonSerializerOptions` + `AddJsonContexts()` | `ConfigureJson(o => o.AddJsonContexts())` (source-gen контексты) |
 | — (новое) | `GetAsyncEnumerable<T>`, SSE, `ApiResponse<T>`, `IApiSession` + переавторизация |

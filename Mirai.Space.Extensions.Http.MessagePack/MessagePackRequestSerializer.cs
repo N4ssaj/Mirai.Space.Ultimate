@@ -6,12 +6,9 @@ namespace Mirai.Space.Extensions.Http.MessagePack;
 
 internal sealed class MessagePackRequestSerializer : IRequestSerializer
 {
-    private const string MsgPackContentType = "application/x-msgpack";
-    private const string EventStreamContentType = "text/event-stream";
-
     private readonly MessagePackSerializerOptions _options;
 
-    public string ContentType => MsgPackContentType;
+    public string ContentType => "application/x-msgpack";
 
     public MessagePackRequestSerializer()
         : this(MessagePackSerializerOptions.Standard)
@@ -39,12 +36,6 @@ internal sealed class MessagePackRequestSerializer : IRequestSerializer
         string? contentType,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        if (string.Equals(contentType, EventStreamContentType, StringComparison.OrdinalIgnoreCase))
-        {
-            ThrowHelper.ThrowNotSupportedException(
-                "SSE is a text transport; MessagePack payloads cannot be streamed over text/event-stream.");
-        }
-
         using var reader = new MessagePackStreamReader(stream, leaveOpen: true);
         while (await reader.ReadAsync(ct).ConfigureAwait(false) is { } message)
         {

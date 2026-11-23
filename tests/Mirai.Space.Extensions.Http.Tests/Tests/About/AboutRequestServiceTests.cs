@@ -4,7 +4,6 @@ using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Mirai.Space.Extensions.Http.Abstractions;
 using Mirai.Space.Extensions.Http.Extensions;
-using Mirai.Space.Extensions.Http.Json.Extensions;
 using Mirai.Space.Extensions.Http.MessagePack.Extensions;
 using Xunit;
 
@@ -110,7 +109,7 @@ public sealed class AboutRequestServiceTests
         var response = await about.OptionsAboutAsync(ct);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.True(response.TryGetHeader("Allow", out var allow));
+        Assert.True(response.ContentHeaders.TryGetValue("Allow", out var allow));
         Assert.Contains("POST", allow.Single());
     }
 
@@ -195,6 +194,23 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
+    public async Task CreateAboutResponseWithoutBody_ReturnsEnvelope(string format)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var server = await AboutTestServer.StartAsync(ct);
+        using var provider = CreateProvider(server, format);
+        var about = provider.GetRequiredService<AboutRequestService>();
+
+        var response = await about.CreateAboutResponseAsync<AboutCreated>(ct);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(response.Content);
+        Assert.Equal("empty", response.Content.Name);
+    }
+
+    [Theory]
+    [InlineData("json")]
+    [InlineData("msgpack")]
     public async Task CreateAboutStream_CopiesBodyIntoDestination(string format)
     {
         var ct = TestContext.Current.CancellationToken;
@@ -262,6 +278,24 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
+    public async Task ReplaceAboutResponse_ReturnsEnvelope(string format)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var server = await AboutTestServer.StartAsync(ct);
+        using var provider = CreateProvider(server, format);
+        var about = provider.GetRequiredService<AboutRequestService>();
+
+        var response = await about.ReplaceAboutResponseAsync(
+            new AboutUpdate { Name = "replaced", Description = "done" }, ct);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(response.Content);
+        Assert.Equal("replaced", response.Content.Name);
+    }
+
+    [Theory]
+    [InlineData("json")]
+    [InlineData("msgpack")]
     public async Task PatchAbout_ReturnsUpdatedBody(string format)
     {
         var ct = TestContext.Current.CancellationToken;
@@ -288,6 +322,24 @@ public sealed class AboutRequestServiceTests
 
         await about.PatchAboutNoResponseAsync(
             new AboutUpdate { Name = "patched", Description = "done" }, ct);
+    }
+
+    [Theory]
+    [InlineData("json")]
+    [InlineData("msgpack")]
+    public async Task PatchAboutResponse_ReturnsEnvelope(string format)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var server = await AboutTestServer.StartAsync(ct);
+        using var provider = CreateProvider(server, format);
+        var about = provider.GetRequiredService<AboutRequestService>();
+
+        var response = await about.PatchAboutResponseAsync(
+            new AboutUpdate { Name = "patched", Description = "done" }, ct);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(response.Content);
+        Assert.Equal("patched", response.Content.Name);
     }
 
     [Theory]
@@ -322,7 +374,24 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task SendAsync_NonSuccess_ThrowsApiException(string format)
+    public async Task DeleteAboutResponse_ReturnsEnvelope(string format)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var server = await AboutTestServer.StartAsync(ct);
+        using var provider = CreateProvider(server, format);
+        var about = provider.GetRequiredService<AboutRequestService>();
+
+        var response = await about.DeleteAboutResponseAsync(ct);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(response.Content);
+        Assert.Equal("deleted", response.Content.Name);
+    }
+
+    [Theory]
+    [InlineData("json")]
+    [InlineData("msgpack")]
+    public async Task SendAsync_NonSuccess_ThrowsRequestException(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -330,7 +399,7 @@ public sealed class AboutRequestServiceTests
         var about = provider.GetRequiredService<AboutRequestService>();
         using var request = new HttpRequestMessage(HttpMethod.Get, "about/missing");
 
-        var exception = await Assert.ThrowsAsync<ApiException>(() => about.SendAsync(request, ct));
+        var exception = await Assert.ThrowsAsync<RequestException>(() => about.SendAsync(request, ct));
 
         Assert.Equal(HttpStatusCode.NotFound, exception.StatusCode);
         Assert.Equal(HttpMethod.Get, exception.Method);
@@ -353,42 +422,59 @@ public sealed class AboutRequestServiceTests
         Assert.Equal("Mirai.Space", response.Content.Name);
     }
 
-    [Theory]
-    [InlineData("json")]
-    [InlineData("msgpack")]
-    public async Task SendStreamAsync_CopiesBodyIntoDestination(string format)
+    [Fact]
+    public async Task WithoutConfigureJson_UsesJsonSerializerByDefault()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
-        using var provider = CreateProvider(server, format);
+        var services = new ServiceCollection();
+        services.AddRequestService<AboutRequestService>()
+            .ConfigureHttpClient(client => client.BaseAddress = new Uri(server.BaseAddress));
+        using var provider = services.BuildServiceProvider();
         var about = provider.GetRequiredService<AboutRequestService>();
-        using var request = new HttpRequestMessage(HttpMethod.Get, "about/stream");
-        using var destination = new MemoryStream();
 
-        var response = await about.SendStreamAsync(request, destination, ct);
+        var result = await about.GetAboutAsync(ct);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("about-stream", Encoding.UTF8.GetString(destination.ToArray()));
+        Assert.NotNull(result);
+        Assert.Equal("Mirai.Space", result.Name);
     }
 
-    [Theory]
-    [InlineData("json")]
-    [InlineData("msgpack")]
-    public async Task SendAsyncEnumerable_StreamsItems(string format)
+    [Fact]
+    public async Task UseErrorHandler_OverridesHandlerForOneClient()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
-        using var provider = CreateProvider(server, format);
+        var handler = new CapturingErrorHandler();
+        var services = new ServiceCollection();
+        services.AddRequestService<AboutRequestService>()
+            .ConfigureHttpClient(client => client.BaseAddress = new Uri(server.BaseAddress))
+            .UseErrorHandler(handler);
+        using var provider = services.BuildServiceProvider();
         var about = provider.GetRequiredService<AboutRequestService>();
-        using var request = new HttpRequestMessage(HttpMethod.Get, "about/tags");
-        var tags = new List<string>();
 
-        await foreach (var tag in about.SendAsyncEnumerable<string>(request, ct))
+        await Assert.ThrowsAsync<RequestException>(() =>
+            about.SendAsync(new HttpRequestMessage(HttpMethod.Get, "about/missing"), ct));
+
+        Assert.Equal(1, handler.Calls);
+    }
+
+    [Fact]
+    public async Task SendAsync_DoesNotDisposeCallerRequest()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var server = await AboutTestServer.StartAsync(ct);
+        using var provider = CreateProvider(server, "json");
+        var about = provider.GetRequiredService<AboutRequestService>();
+        var content = new TrackingContent(Encoding.UTF8.GetBytes("{}"));
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "about")
         {
-            tags.Add(tag);
-        }
+            Content = content
+        };
 
-        Assert.Equal(new[] { "alpha", "beta" }, tags);
+        await about.SendAsync(request, ct);
+
+        Assert.False(content.Disposed);
     }
 
     private static ServiceProvider CreateProvider(AboutTestServer server, string format)
@@ -402,11 +488,7 @@ public sealed class AboutRequestServiceTests
                     new MediaTypeWithQualityHeaderValue(ContentType(format)));
             });
 
-        if (format == "json")
-        {
-            builder.UseJson();
-        }
-        else
+        if (format != "json")
         {
             builder.UseMessagePack();
         }
@@ -416,4 +498,28 @@ public sealed class AboutRequestServiceTests
 
     private static string ContentType(string format) =>
         format == "json" ? "application/json" : "application/x-msgpack";
+
+    private sealed class CapturingErrorHandler : IRequestErrorHandler
+    {
+        public int Calls { get; private set; }
+
+        public ValueTask HandleAsync(
+            RequestException exception,
+            CancellationToken ct = default)
+        {
+            Calls++;
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class TrackingContent(byte[] bytes) : ByteArrayContent(bytes)
+    {
+        public bool Disposed { get; private set; }
+
+        protected override void Dispose(bool disposing)
+        {
+            Disposed = true;
+            base.Dispose(disposing);
+        }
+    }
 }

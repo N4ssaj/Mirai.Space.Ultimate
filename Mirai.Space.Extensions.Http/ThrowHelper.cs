@@ -1,10 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 
 namespace Mirai.Space.Extensions.Http;
 
 internal static class ThrowHelper
 {
     [DoesNotReturn]
-    public static void ThrowInvalidOperationException(string message) =>
-        throw new InvalidOperationException(message);
+    public static void ThrowJsonException(string message) =>
+        throw new JsonException(message);
 }

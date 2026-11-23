@@ -9,159 +9,114 @@ internal sealed partial class RequestService : IRequestService
 {
     private readonly HttpClient _httpClient;
     private readonly IRequestSerializer _serializer;
-    private readonly IApiErrorHandler _errorHandler;
+    private readonly IRequestErrorHandler _errorHandler;
 
-    internal RequestService(HttpClient httpClient, IRequestSerializer serializer, IApiErrorHandler errorHandler)
+    internal RequestService(
+        HttpClient httpClient,
+        IRequestSerializer serializer,
+        IRequestErrorHandler errorHandler)
     {
         _httpClient = httpClient;
         _serializer = serializer;
         _errorHandler = errorHandler;
     }
 
-    private Task<ApiResponse> SendCoreAsync(HttpRequestMessage request, CancellationToken ct) =>
-        SendCoreAsync(request, disposeRequest: true, ct);
-
-    private async Task<ApiResponse> SendCoreAsync(
+    private async Task<RequestResponse> SendResponseCoreAsync(
         HttpRequestMessage request,
-        bool disposeRequest,
         CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        using var response = await _httpClient
+            .SendAsync(request, HttpCompletionOption.ResponseContentRead, ct)
+            .ConfigureAwait(false);
 
-        try
-        {
-            using var response = await SendResponseAsync(request, ct).ConfigureAwait(false);
-            return ApiResponse.FromMessage(response);
-        }
-        finally
-        {
-            if (disposeRequest)
-            {
-                request.Dispose();
-            }
-        }
+        await ValidateResponseAsync(response, request, ct).ConfigureAwait(false);
+
+        return response.ToRequestResponse();
     }
 
-    private Task<ApiResponse<T>> SendCoreAsync<T>(HttpRequestMessage request, CancellationToken ct) =>
-        SendCoreAsync<T>(request, disposeRequest: true, ct);
-
-    private async Task<ApiResponse<T>> SendCoreAsync<T>(
+    private async Task<RequestResponse<T>> SendResponseCoreAsync<T>(
         HttpRequestMessage request,
-        bool disposeRequest,
         CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        using var response = await _httpClient
+            .SendAsync(request, HttpCompletionOption.ResponseContentRead, ct)
+            .ConfigureAwait(false);
 
-        try
-        {
-            using var response = await SendResponseAsync(request, ct).ConfigureAwait(false);
-            var content = await ReadAsync<T>(response, ct).ConfigureAwait(false);
-            return ApiResponse<T>.FromMessage(response, content);
-        }
-        finally
-        {
-            if (disposeRequest)
-            {
-                request.Dispose();
-            }
-        }
+        await ValidateResponseAsync(response, request, ct).ConfigureAwait(false);
+
+        var content = await ReadResponseAsync<T>(response, ct).ConfigureAwait(false);
+
+        return response.ToRequestResponse(content);
     }
 
-    private async Task<ApiResponse> SendForStreamCoreAsync(
+    private async Task<T?> SendContentCoreAsync<T>(
+        HttpRequestMessage request,
+        CancellationToken ct)
+    {
+        using var response = await _httpClient
+            .SendAsync(request, HttpCompletionOption.ResponseContentRead, ct)
+            .ConfigureAwait(false);
+
+        await ValidateResponseAsync(response, request, ct).ConfigureAwait(false);
+
+        return await ReadResponseAsync<T>(response, ct).ConfigureAwait(false);
+    }
+
+    private async Task<RequestResponse> SendStreamCoreAsync(
         HttpRequestMessage request,
         Stream destination,
-        bool disposeRequest,
         CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(destination);
+        using var response = await _httpClient
+            .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct)
+            .ConfigureAwait(false);
 
-        try
-        {
-            using var response = await SendResponseAsync(request, ct).ConfigureAwait(false);
-            await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-            await stream.CopyToAsync(destination, ct).ConfigureAwait(false);
+        await ValidateResponseAsync(response, request, ct).ConfigureAwait(false);
 
-            return ApiResponse.FromMessage(response);
-        }
-        finally
-        {
-            if (disposeRequest)
-            {
-                request.Dispose();
-            }
-        }
+        await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+        await stream.CopyToAsync(destination, ct).ConfigureAwait(false);
+
+        return response.ToRequestResponse();
     }
 
     private async IAsyncEnumerable<T> SendAsyncEnumerableCoreAsync<T>(
         HttpRequestMessage request,
-        bool disposeRequest,
         [EnumeratorCancellation] CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        try
-        {
-            using var response = await SendResponseAsync(request, ct).ConfigureAwait(false);
-            await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-            var contentType = response.Content.Headers.ContentType?.MediaType;
-
-            await foreach (var item in _serializer
-                               .DeserializeAsyncEnumerable<T>(stream, contentType, ct)
-                               .WithCancellation(ct)
-                               .ConfigureAwait(false))
-            {
-                yield return item;
-            }
-        }
-        finally
-        {
-            if (disposeRequest)
-            {
-                request.Dispose();
-            }
-        }
-    }
-
-    private async ValueTask<HttpResponseMessage> SendResponseAsync(
-        HttpRequestMessage request,
-        CancellationToken ct)
-    {
-        var response = await _httpClient
+        using var response = await _httpClient
             .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct)
             .ConfigureAwait(false);
 
-        try
+        await ValidateResponseAsync(response, request, ct).ConfigureAwait(false);
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+        var contentType = response.Content.Headers.ContentType?.MediaType;
+
+        await foreach (var item in _serializer
+                           .DeserializeAsyncEnumerable<T>(stream, contentType, ct)
+                           .WithCancellation(ct)
+                           .ConfigureAwait(false))
         {
-            response.RequestMessage ??= request;
-            await ThrowIfErrorAsync(response, ct).ConfigureAwait(false);
-            return response;
-        }
-        catch
-        {
-            response.Dispose();
-            throw;
+            yield return item;
         }
     }
 
-    private async ValueTask ThrowIfErrorAsync(HttpResponseMessage response, CancellationToken ct)
+    private async ValueTask ValidateResponseAsync(
+        HttpResponseMessage response,
+        HttpRequestMessage request,
+        CancellationToken ct)
     {
         if (response.IsSuccessStatusCode)
         {
             return;
         }
 
-        var exception = await _errorHandler.HandleAsync(response, ct).ConfigureAwait(false);
-        if (exception is null)
-        {
-            ThrowHelper.ThrowInvalidOperationException(
-                $"{_errorHandler.GetType().Name} returned a null ApiException.");
-        }
-
+        var exception = response.ToRequestException(request);
+        await _errorHandler.HandleAsync(exception, ct).ConfigureAwait(false);
         throw exception;
     }
 
-    private async ValueTask<T?> ReadAsync<T>(HttpResponseMessage response, CancellationToken ct)
+    private async ValueTask<T?> ReadResponseAsync<T>(HttpResponseMessage response, CancellationToken ct)
     {
         if (response.StatusCode is HttpStatusCode.NoContent or HttpStatusCode.ResetContent)
         {
@@ -174,14 +129,30 @@ internal sealed partial class RequestService : IRequestService
         }
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+        if (stream.CanSeek && stream.Length == 0)
+        {
+            return default;
+        }
+
         return await _serializer.DeserializeAsync<T>(stream, ct).ConfigureAwait(false);
     }
 
-    private HttpContent CreateContent<TBody>(TBody body)
+    private static HttpRequestMessage CreateRequest(
+        HttpMethod method,
+        string url)
     {
-        var bytes = _serializer.Serialize(body);
-        var content = new ReadOnlyMemoryContent(bytes);
+        ArgumentNullException.ThrowIfNull(url);
+        return new(method, url);
+    }
+
+    private HttpRequestMessage CreateRequestWithBody<TBody>(HttpMethod method, string url, TBody body)
+    {
+        var content = new ReadOnlyMemoryContent(_serializer.Serialize(body));
         content.Headers.ContentType = new MediaTypeHeaderValue(_serializer.ContentType);
-        return content;
+
+        var request = CreateRequest(method, url);
+        request.Content = content;
+
+        return request;
     }
 }

@@ -4,37 +4,70 @@ namespace Mirai.Space.Extensions.Http;
 
 internal sealed partial class RequestService
 {
-    public async Task<T?> PostAsync<T>(string url, CancellationToken ct = default) =>
-        (await SendCoreAsync<T>(ApiRequest.Post(url), ct).ConfigureAwait(false)).Content;
+    public async Task<T?> PostAsync<T>(string url, CancellationToken ct = default)
+    {
+        using var request = CreateRequest(HttpMethod.Post, url);
+        return await SendContentCoreAsync<T>(request, ct).ConfigureAwait(false);
+    }
 
     public async Task<TResponse?> PostAsync<TResponse, TBody>(
         string url,
         TBody body,
-        CancellationToken ct = default) =>
-        (await SendCoreAsync<TResponse>(ApiRequest.Post(url, CreateContent(body)), ct).ConfigureAwait(false)).Content;
+        CancellationToken ct = default)
+    {
+        using var request = CreateRequestWithBody(HttpMethod.Post, url, body);
+        return await SendContentCoreAsync<TResponse>(request, ct).ConfigureAwait(false);
+    }
 
-    public Task PostAsync(string url, CancellationToken ct = default) =>
-        SendCoreAsync(ApiRequest.Post(url), ct);
+    public async Task PostAsync(string url, CancellationToken ct = default)
+    {
+        using var request = CreateRequest(HttpMethod.Post, url);
+        await SendResponseCoreAsync(request, ct).ConfigureAwait(false);
+    }
 
-    public Task PostAsync<TBody>(string url, TBody body, CancellationToken ct = default) =>
-        SendCoreAsync(ApiRequest.Post(url, CreateContent(body)), ct);
+    public async Task PostAsync<TBody>(string url, TBody body, CancellationToken ct = default)
+    {
+        using var request = CreateRequestWithBody(HttpMethod.Post, url, body);
+        await SendResponseCoreAsync(request, ct).ConfigureAwait(false);
+    }
 
-    public Task<ApiResponse<TResponse>> PostResponseAsync<TResponse, TBody>(
+    public async Task<RequestResponse<TResponse>> PostResponseAsync<TResponse>(
+        string url,
+        CancellationToken ct = default)
+    {
+        using var request = CreateRequest(HttpMethod.Post, url);
+        return await SendResponseCoreAsync<TResponse>(request, ct).ConfigureAwait(false);
+    }
+
+    public async Task<RequestResponse<TResponse>> PostResponseAsync<TResponse, TBody>(
         string url,
         TBody body,
-        CancellationToken ct = default) =>
-        SendCoreAsync<TResponse>(ApiRequest.Post(url, CreateContent(body)), ct);
+        CancellationToken ct = default)
+    {
+        using var request = CreateRequestWithBody(HttpMethod.Post, url, body);
+        return await SendResponseCoreAsync<TResponse>(request, ct).ConfigureAwait(false);
+    }
 
-    public Task<ApiResponse> PostStreamAsync(
+    public async Task<RequestResponse> PostToStreamAsync(
         string url,
         Stream destination,
-        CancellationToken ct = default) =>
-        SendForStreamCoreAsync(ApiRequest.Post(url), destination, disposeRequest: true, ct);
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
 
-    public Task<ApiResponse> PostStreamAsync<TBody>(
+        using var request = CreateRequest(HttpMethod.Post, url);
+        return await SendStreamCoreAsync(request, destination, ct).ConfigureAwait(false);
+    }
+
+    public async Task<RequestResponse> PostToStreamAsync<TBody>(
         string url,
         TBody body,
         Stream destination,
-        CancellationToken ct = default) =>
-        SendForStreamCoreAsync(ApiRequest.Post(url, CreateContent(body)), destination, disposeRequest: true, ct);
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+
+        using var request = CreateRequestWithBody(HttpMethod.Post, url, body);
+        return await SendStreamCoreAsync(request, destination, ct).ConfigureAwait(false);
+    }
 }

@@ -22,7 +22,6 @@
         <ProjectReference Include="..\Mirai.Space.Core\Mirai.Space.Core.csproj" />
         <ProjectReference Include="..\Mirai.Space.Extensions.Avalonia\Mirai.Space.Extensions.Avalonia.csproj" />
         <ProjectReference Include="..\Mirai.Space.Extensions.Http\Mirai.Space.Extensions.Http.csproj" />
-        <ProjectReference Include="..\Mirai.Space.Extensions.Http.Json\Mirai.Space.Extensions.Http.Json.csproj" />
         <ProjectReference Include="..\Mirai.Space.Extensions.Http.MessagePack\Mirai.Space.Extensions.Http.MessagePack.csproj" />
         <ProjectReference Include="..\Mirai.Space.Extensions.MVVM\Mirai.Space.Extensions.MVVM.csproj" />
         <ProjectReference Include="..\Mirai.Space.Extensions.Reactive\Mirai.Space.Extensions.Reactive.csproj" />

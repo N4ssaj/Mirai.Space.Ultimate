@@ -1,6 +1,8 @@
 using System;
+using LifeTimeType = Mirai.Space.Extensions.MVVM.LifeTime.LifeTime;
+using Mirai.Space.Extensions.MVVM.DependencyInjection;
+using Mirai.Space.Extensions.MVVM.LifeTime;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Mirai.Space.Extensions.MVVM.Extensions;
 
@@ -13,6 +15,17 @@ public static class ServiceCollectionExtensions
             ArgumentNullException.ThrowIfNull(services);
 
             services.AddLazy();
+            services.AddLifeTime();
+
+            return services;
+        }
+
+        public IServiceCollection AddLifeTime()
+        {
+            ArgumentNullException.ThrowIfNull(services);
+
+            services.AddTransient<LifeTimeType>();
+            services.AddTransient<AsyncLifeTime>();
 
             return services;
         }

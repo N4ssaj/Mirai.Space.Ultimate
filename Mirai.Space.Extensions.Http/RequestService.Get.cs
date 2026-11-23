@@ -1,33 +1,51 @@
+using System.Runtime.CompilerServices;
 using Mirai.Space.Extensions.Http.Abstractions;
 
 namespace Mirai.Space.Extensions.Http;
 
 internal sealed partial class RequestService
 {
-    public async Task<T?> GetAsync<T>(string url, CancellationToken ct = default) =>
-        (await SendCoreAsync<T>(ApiRequest.Get(url), ct).ConfigureAwait(false)).Content;
+    public async Task<T?> GetAsync<T>(string url, CancellationToken ct = default)
+    {
+        using var request = CreateRequest(HttpMethod.Get, url);
+        return await SendContentCoreAsync<T>(request, ct).ConfigureAwait(false);
+    }
 
-    public Task<ApiResponse<T>> GetResponseAsync<T>(string url, CancellationToken ct = default) =>
-        SendCoreAsync<T>(ApiRequest.Get(url), ct);
+    public async Task<RequestResponse<T>> GetResponseAsync<T>(string url, CancellationToken ct = default)
+    {
+        using var request = CreateRequest(HttpMethod.Get, url);
+        return await SendResponseCoreAsync<T>(request, ct).ConfigureAwait(false);
+    }
 
-    public Task<ApiResponse> GetStreamAsync(
+    public async Task<RequestResponse> DownloadAsync(
         string url,
         Stream destination,
-        CancellationToken ct = default) =>
-        SendForStreamCoreAsync(ApiRequest.Get(url), destination, disposeRequest: true, ct);
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
 
-    public IAsyncEnumerable<T> GetAsyncEnumerable<T>(string url, CancellationToken ct = default) =>
-        SendAsyncEnumerableCoreAsync<T>(ApiRequest.Get(url), disposeRequest: true, ct);
+        using var request = CreateRequest(HttpMethod.Get, url);
+        return await SendStreamCoreAsync(request, destination, ct).ConfigureAwait(false);
+    }
 
-    public Task<ApiResponse> HeadAsync(string url, CancellationToken ct = default) =>
-        SendCoreAsync(ApiRequest.Head(url), ct);
+    public IAsyncEnumerable<T> GetAsyncEnumerable<T>(string url, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(url);
 
-    public Task<ApiResponse> OptionsAsync(string url, CancellationToken ct = default) =>
-        SendCoreAsync(ApiRequest.Options(url), ct);
+        return GetAsyncEnumerableCoreAsync<T>(url, ct);
+    }
 
-    public Task DeleteAsync(string url, CancellationToken ct = default) =>
-        SendCoreAsync(ApiRequest.Delete(url), ct);
+    private async IAsyncEnumerable<T> GetAsyncEnumerableCoreAsync<T>(
+        string url,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        using var request = CreateRequest(HttpMethod.Get, url);
 
-    public async Task<T?> DeleteAsync<T>(string url, CancellationToken ct = default) =>
-        (await SendCoreAsync<T>(ApiRequest.Delete(url), ct).ConfigureAwait(false)).Content;
+        await foreach (var item in SendAsyncEnumerableCoreAsync<T>(request, ct)
+                           .WithCancellation(ct)
+                           .ConfigureAwait(false))
+        {
+            yield return item;
+        }
+    }
 }
