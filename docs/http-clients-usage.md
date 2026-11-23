@@ -80,7 +80,7 @@ public sealed class AboutRequestService(IRequestService requests)
 }
 ```
 
-`AboutRequestService` in `tests/Mirai.Space.Extensions.Http.Tests/Tests/About` is the reference
+`AboutRequestService` in `tests/Mirai.Space.Extensions.Http.Tests/About` is the reference
 implementation: it exercises all 25 `IRequestService` methods against a real ASP.NET host.
 
 ### Method groups

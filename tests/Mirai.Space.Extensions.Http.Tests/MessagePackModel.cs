@@ -3,7 +3,7 @@ using MessagePack;
 namespace Mirai.Space.Extensions.Http.Tests;
 
 [MessagePackObject]
-public sealed class MsgPackModel
+public sealed class MessagePackModel
 {
     [Key(0)]
     public int Id { get; init; }

@@ -53,7 +53,7 @@
 - `IRequestService` содержит 25 методов: добавлены `PostResponseAsync<TResponse>`,
   `PostResponseAsync<TResponse, TBody>`, `PutResponseAsync<TResponse, TBody>`,
   `PatchResponseAsync<TResponse, TBody>`, `DeleteResponseAsync<T>`.
-- Тесты лежат в `tests/Mirai.Space.Extensions.Http.Tests/Tests/`; `InternalsVisibleTo` не используется:
+- Тесты лежат в `tests/Mirai.Space.Extensions.Http.Tests/`; `InternalsVisibleTo` не используется:
   фабрики `RequestResponse`/`RequestException` живут в `Mirai.Space.Extensions.Http`, а Abstractions
   не ссылается на `HttpResponseMessage` (кроме escape-hatch `HttpRequestMessage` в `IRequestService`).
 

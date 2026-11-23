@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Mirai.Space.Extensions.Http.Tests;
 
-public sealed class RequestServiceGetTest
+public sealed class RequestServiceGetTests
 {
     private const string ItemUrl = "http://localhost/items/1";
 

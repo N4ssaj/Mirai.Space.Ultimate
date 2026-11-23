@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Mirai.Space.Extensions.Http.Tests;
 
-public sealed class RequestServiceHeadOptionsTest
+public sealed class RequestServiceHeadOptionsTests
 {
     private const string ResourceUrl = "http://localhost/about";
 

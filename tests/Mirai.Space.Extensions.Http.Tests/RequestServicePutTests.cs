@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Mirai.Space.Extensions.Http.Tests;
 
-public sealed class RequestServicePutTest
+public sealed class RequestServicePutTests
 {
     private const string ResourceUrl = "http://localhost/items/1";
 

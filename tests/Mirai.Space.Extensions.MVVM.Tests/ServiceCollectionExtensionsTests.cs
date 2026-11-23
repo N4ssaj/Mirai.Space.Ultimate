@@ -35,8 +35,7 @@ public sealed class ServiceCollectionExtensionsTests
 
         var lazy = provider.GetRequiredService<Lazy<IServiceScopeFactory>>();
 
-        Assert.NotNull(lazy.Value);
-        Assert.Same(lazy.Value, lazy.Value);
+        Assert.Same(provider.GetRequiredService<IServiceScopeFactory>(), lazy.Value);
     }
 
     [Fact]

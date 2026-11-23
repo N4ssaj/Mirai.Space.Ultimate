@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Mirai.Space.Extensions.Http.Tests;
 
-public sealed class RequestServiceDeleteTest
+public sealed class RequestServiceDeleteTests
 {
     private const string ResourceUrl = "http://localhost/items/1";
 

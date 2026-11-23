@@ -14,7 +14,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task GetAbout_DeserializesBody(string format)
+    public async Task GetAboutAsync_DeserializesBody(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -30,7 +30,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task GetAboutResponse_ExposesStatusAndHeaders(string format)
+    public async Task GetAboutResponseAsync_ExposesStatusAndHeaders(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -47,7 +47,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task DownloadAbout_CopiesBodyIntoDestination(string format)
+    public async Task DownloadAboutAsync_CopiesBodyIntoDestination(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -64,7 +64,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task GetTags_StreamsItems(string format)
+    public async Task GetTagsAsync_StreamsItems(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -83,7 +83,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task HeadAbout_ReturnsResponse(string format)
+    public async Task HeadAboutAsync_ReturnsResponse(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -99,7 +99,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task OptionsAbout_ReturnsAllowHeader(string format)
+    public async Task OptionsAboutAsync_ReturnsAllowHeader(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -116,7 +116,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task CreateAboutWithoutBody_ReturnsResponse(string format)
+    public async Task CreateAboutAsync_WithoutBody_ReturnsResponse(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -132,7 +132,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task CreateAboutWithBody_ReturnsResponse(string format)
+    public async Task CreateAboutAsync_WithBody_ReturnsResponse(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -149,7 +149,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task CreateAboutWithoutBody_Completes(string format)
+    public async Task CreateAboutAsync_WithoutBody_Completes(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -162,7 +162,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task CreateAboutWithBody_Completes(string format)
+    public async Task CreateAboutAsync_WithBody_Completes(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -176,7 +176,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task CreateAboutResponse_ReturnsEnvelope(string format)
+    public async Task CreateAboutResponseAsync_ReturnsEnvelope(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -194,7 +194,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task CreateAboutResponseWithoutBody_ReturnsEnvelope(string format)
+    public async Task CreateAboutResponseAsync_WithoutBody_ReturnsEnvelope(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -211,7 +211,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task CreateAboutStream_CopiesBodyIntoDestination(string format)
+    public async Task CreateAboutStreamAsync_CopiesBodyIntoDestination(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -228,7 +228,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task CreateAboutStreamWithBody_CopiesBodyIntoDestination(string format)
+    public async Task CreateAboutStreamAsync_WithBody_CopiesBodyIntoDestination(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -246,7 +246,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task ReplaceAbout_ReturnsUpdatedBody(string format)
+    public async Task ReplaceAboutAsync_ReturnsUpdatedBody(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -264,7 +264,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task ReplaceAboutNoResponse_Completes(string format)
+    public async Task ReplaceAboutAsync_NoResponse_Completes(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -278,7 +278,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task ReplaceAboutResponse_ReturnsEnvelope(string format)
+    public async Task ReplaceAboutResponseAsync_ReturnsEnvelope(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -296,7 +296,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task PatchAbout_ReturnsUpdatedBody(string format)
+    public async Task PatchAboutAsync_ReturnsUpdatedBody(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -313,7 +313,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task PatchAboutNoResponse_Completes(string format)
+    public async Task PatchAboutAsync_NoResponse_Completes(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -327,7 +327,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task PatchAboutResponse_ReturnsEnvelope(string format)
+    public async Task PatchAboutResponseAsync_ReturnsEnvelope(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -345,7 +345,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task DeleteAbout_Completes(string format)
+    public async Task DeleteAboutAsync_Completes(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -358,7 +358,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task DeleteAboutWithResponse_ReturnsBody(string format)
+    public async Task DeleteAboutAsync_WithResponse_ReturnsBody(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -374,7 +374,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task DeleteAboutResponse_ReturnsEnvelope(string format)
+    public async Task DeleteAboutResponseAsync_ReturnsEnvelope(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -408,7 +408,7 @@ public sealed class AboutRequestServiceTests
     [Theory]
     [InlineData("json")]
     [InlineData("msgpack")]
-    public async Task SendAsyncGeneric_ReturnsContent(string format)
+    public async Task SendAsync_Generic_ReturnsContent(string format)
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
@@ -423,7 +423,7 @@ public sealed class AboutRequestServiceTests
     }
 
     [Fact]
-    public async Task WithoutConfigureJson_UsesJsonSerializerByDefault()
+    public async Task AddRequestService_WithoutConfigureJson_UsesJsonSerializerByDefault()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);

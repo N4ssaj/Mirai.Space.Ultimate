@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Mirai.Space.Extensions.Http.Tests;
 
-public sealed class RequestServiceBehaviorTest
+public sealed class RequestServiceBehaviorTests
 {
     private const string ResourceUrl = "http://localhost/items/1";
 
@@ -55,7 +55,7 @@ public sealed class RequestServiceBehaviorTest
     }
 
     [Fact]
-    public async Task NonSuccess_InvokesErrorHandlerAndThrows()
+    public async Task GetAsync_NonSuccess_InvokesErrorHandlerAndThrows()
     {
         var handler = new CapturingErrorHandler();
         using var host = TestHost.Create(
@@ -71,7 +71,7 @@ public sealed class RequestServiceBehaviorTest
     }
 
     [Fact]
-    public async Task NonSuccess_ErrorHandlerExceptionReplacesRequestException()
+    public async Task GetAsync_NonSuccess_ErrorHandlerExceptionReplacesRequestException()
     {
         using var host = TestHost.Create(
             _ => TestResponses.Empty(HttpStatusCode.BadGateway),
@@ -94,7 +94,7 @@ public sealed class RequestServiceBehaviorTest
     }
 
     [Fact]
-    public async Task HighLevelRequest_IsDisposedAfterCompletion()
+    public async Task PostAsync_AfterCompletion_DisposesRequestContent()
     {
         using var host = TestHost.Create(_ => TestResponses.Empty());
 
@@ -128,7 +128,7 @@ public sealed class RequestServiceBehaviorTest
         using var host = TestHost.Create(_ => TestResponses.Empty());
 
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            host.Client.Requests.GetAsync<TestModel>(null!));
+            host.Client.Requests.GetAsync<TestModel>(null!, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -139,7 +139,8 @@ public sealed class RequestServiceBehaviorTest
             Content = new StreamContent(new MemoryStream())
         });
 
-        var result = await host.Client.Requests.GetAsync<TestModel>(ResourceUrl);
+        var result = await host.Client.Requests.GetAsync<TestModel>(
+            ResourceUrl, TestContext.Current.CancellationToken);
 
         Assert.Null(result);
     }
@@ -150,7 +151,7 @@ public sealed class RequestServiceBehaviorTest
         using var host = TestHost.Create(_ => TestResponses.Empty());
 
         Assert.Throws<ArgumentNullException>(() =>
-            host.Client.Requests.GetAsyncEnumerable<int>(null!));
+            host.Client.Requests.GetAsyncEnumerable<int>(null!, TestContext.Current.CancellationToken));
     }
 
     private sealed class CapturingErrorHandler : IRequestErrorHandler

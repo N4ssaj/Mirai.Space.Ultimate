@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Mirai.Space.Extensions.Http.Tests;
 
-public sealed class RequestServiceDiTest
+public sealed class RequestServiceDiTests
 {
     private const string ResourceUrl = "http://localhost/items";
 
@@ -80,7 +80,7 @@ public sealed class RequestServiceDiTest
             builder => builder.UseMessagePack());
 
         await host.Client.Requests.PostAsync(
-            ResourceUrl, new MsgPackModel { Id = 1, Name = "value" },
+            ResourceUrl, new MessagePackModel { Id = 1, Name = "value" },
             TestContext.Current.CancellationToken);
 
         Assert.Equal("application/x-msgpack", host.Handler.Requests[^1].ContentType);
@@ -152,7 +152,7 @@ public sealed class RequestServiceDiTest
         await jsonClient.Requests.PostAsync(
             ResourceUrl, new TestModel(1, "json"), TestContext.Current.CancellationToken);
         await msgPackClient.Requests.PostAsync(
-            ResourceUrl, new MsgPackModel { Id = 1, Name = "msgpack" },
+            ResourceUrl, new MessagePackModel { Id = 1, Name = "msgpack" },
             TestContext.Current.CancellationToken);
 
         Assert.Equal("application/json", handler.Requests[0].ContentType);
@@ -160,16 +160,19 @@ public sealed class RequestServiceDiTest
     }
 
     [Fact]
-    public void AddRequestService_IsIdempotentForTypedClientAndHandler()
+    public void AddRequestService_CalledTwice_RegistersSingleDescriptorPerService()
     {
         var services = new ServiceCollection();
+
         services.AddRequestService<TestClient>();
         services.AddRequestService<TestClient>();
 
-        using var provider = services.BuildServiceProvider();
-        var client = provider.GetRequiredService<TestClient>();
-
-        Assert.NotNull(client.Requests);
+        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(TestClient));
+        Assert.Single(services, descriptor =>
+            descriptor.ServiceType == typeof(IRequestService) &&
+            Equals(descriptor.ServiceKey, typeof(TestClient).FullName));
+        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IRequestSerializer));
+        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IRequestErrorHandler));
     }
 
     private sealed class CustomSerializer : IRequestSerializer

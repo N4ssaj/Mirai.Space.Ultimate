@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Mirai.Space.Extensions.Http.Tests;
 
-public sealed class RequestServiceStreamingTest
+public sealed class RequestServiceStreamingTests
 {
     private const string StreamUrl = "http://localhost/stream";
 
@@ -67,12 +67,12 @@ public sealed class RequestServiceStreamingTest
     public async Task GetAsyncEnumerable_MessagePack_ReadsSequenceOfValues()
     {
         var body = SerializeMsgPack(
-            new MsgPackModel { Id = 1, Name = "a" },
-            new MsgPackModel { Id = 2, Name = "b" });
+            new MessagePackModel { Id = 1, Name = "a" },
+            new MessagePackModel { Id = 2, Name = "b" });
         using var host = TestHost.Create(_ => TestResponses.Bytes(body, "application/x-msgpack"),
             builder => builder.UseMessagePack());
 
-        var items = await ReadAllAsync(host.Client.Requests.GetAsyncEnumerable<MsgPackModel>(
+        var items = await ReadAllAsync(host.Client.Requests.GetAsyncEnumerable<MessagePackModel>(
             StreamUrl, TestContext.Current.CancellationToken));
 
         Assert.Equal(new[] { 1, 2 }, items.Select(item => item.Id));
@@ -82,14 +82,14 @@ public sealed class RequestServiceStreamingTest
     public async Task GetAsyncEnumerable_MessagePackTopLevelArray_ThrowsSerializationException()
     {
         var body = new byte[] { 0x92 }
-            .Concat(SerializeMsgPack(new MsgPackModel { Id = 1, Name = "a" }))
-            .Concat(SerializeMsgPack(new MsgPackModel { Id = 2, Name = "b" }))
+            .Concat(SerializeMsgPack(new MessagePackModel { Id = 1, Name = "a" }))
+            .Concat(SerializeMsgPack(new MessagePackModel { Id = 2, Name = "b" }))
             .ToArray();
         using var host = TestHost.Create(_ => TestResponses.Bytes(body, "application/x-msgpack"),
             builder => builder.UseMessagePack());
 
         await Assert.ThrowsAsync<MessagePackSerializationException>(async () =>
-            await ReadAllAsync(host.Client.Requests.GetAsyncEnumerable<MsgPackModel>(
+            await ReadAllAsync(host.Client.Requests.GetAsyncEnumerable<MessagePackModel>(
                 StreamUrl, TestContext.Current.CancellationToken)));
     }
 
@@ -100,20 +100,8 @@ public sealed class RequestServiceStreamingTest
             builder => builder.UseMessagePack());
 
         await Assert.ThrowsAsync<MessagePackSerializationException>(async () =>
-            await ReadAllAsync(host.Client.Requests.GetAsyncEnumerable<MsgPackModel>(
+            await ReadAllAsync(host.Client.Requests.GetAsyncEnumerable<MessagePackModel>(
                 StreamUrl, TestContext.Current.CancellationToken)));
-    }
-
-    [Fact]
-    public async Task DownloadAsync_ResponseHeadersRead_DoesNotBufferDestination()
-    {
-        using var host = TestHost.Create(_ => TestResponses.Text("abc", "text/plain"));
-        using var destination = new MemoryStream();
-
-        await host.Client.Requests.DownloadAsync(
-            StreamUrl, destination, TestContext.Current.CancellationToken);
-
-        Assert.Equal(3, destination.Length);
     }
 
     [Fact]
@@ -125,10 +113,10 @@ public sealed class RequestServiceStreamingTest
         var serializer = provider.GetRequiredKeyedService<IRequestSerializer>(
             typeof(TestClient).FullName!);
 
-        var bytes = serializer.Serialize(new MsgPackModel { Id = 7, Name = "x" });
+        var bytes = serializer.Serialize(new MessagePackModel { Id = 7, Name = "x" });
         using var stream = new MemoryStream(bytes.ToArray());
 
-        var result = await serializer.DeserializeAsync<MsgPackModel>(
+        var result = await serializer.DeserializeAsync<MessagePackModel>(
             stream, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
@@ -147,7 +135,7 @@ public sealed class RequestServiceStreamingTest
         return items;
     }
 
-    private static byte[] SerializeMsgPack(params MsgPackModel[] values) =>
+    private static byte[] SerializeMsgPack(params MessagePackModel[] values) =>
         values
             .Select(value => MessagePackSerializer.Serialize(
                 value, cancellationToken: TestContext.Current.CancellationToken))

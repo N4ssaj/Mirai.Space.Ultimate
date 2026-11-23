@@ -25,12 +25,15 @@ public sealed class ReactiveDialogTests
     }
 
     [Fact]
-    public void Close_Twice_DoesNotThrow()
+    public async Task Close_Twice_DoesNotThrow()
     {
         var dialog = new TestDialog();
 
         dialog.Close();
         dialog.Close();
+
+        await dialog.Completion;
+        Assert.True(dialog.Completion.IsCompletedSuccessfully);
     }
 
     private sealed class TestDialog : ReactiveDialog
