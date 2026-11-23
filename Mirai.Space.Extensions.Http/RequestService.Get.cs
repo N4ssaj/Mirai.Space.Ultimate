@@ -11,6 +11,12 @@ internal sealed partial class RequestService
         return await SendContentCoreAsync<T>(request, ct).ConfigureAwait(false);
     }
 
+    public async Task<RequestResponse> GetResponseAsync(string url, CancellationToken ct = default)
+    {
+        using var request = CreateRequest(HttpMethod.Get, url);
+        return await SendResponseCoreAsync(request, ct).ConfigureAwait(false);
+    }
+
     public async Task<RequestResponse<T>> GetResponseAsync<T>(string url, CancellationToken ct = default)
     {
         using var request = CreateRequest(HttpMethod.Get, url);

@@ -9,7 +9,14 @@ public class LifeTime : IDisposable
 
     public bool IsDisposed => Volatile.Read(ref _disposed);
 
-    public CancellationToken Token => Cancellation.Token;
+    public CancellationToken Token
+    {
+        get
+        {
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
+            return Cancellation.Token;
+        }
+    }
 
     public void Add(IDisposable disposable)
     {

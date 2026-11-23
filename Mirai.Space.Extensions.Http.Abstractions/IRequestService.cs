@@ -2,9 +2,9 @@ namespace Mirai.Space.Extensions.Http.Abstractions;
 
 public interface IRequestService
 {
-    #region GET
-
     Task<T?> GetAsync<T>(string url, CancellationToken ct = default);
+
+    Task<RequestResponse> GetResponseAsync(string url, CancellationToken ct = default);
 
     Task<RequestResponse<T>> GetResponseAsync<T>(string url, CancellationToken ct = default);
 
@@ -12,17 +12,9 @@ public interface IRequestService
 
     IAsyncEnumerable<T> GetAsyncEnumerable<T>(string url, CancellationToken ct = default);
 
-    #endregion
-
-    #region HEAD / OPTIONS
-
     Task<RequestResponse> HeadAsync(string url, CancellationToken ct = default);
 
     Task<RequestResponse> OptionsAsync(string url, CancellationToken ct = default);
-
-    #endregion
-
-    #region POST
 
     Task<T?> PostAsync<T>(string url, CancellationToken ct = default);
 
@@ -31,6 +23,8 @@ public interface IRequestService
     Task PostAsync(string url, CancellationToken ct = default);
 
     Task PostAsync<TBody>(string url, TBody body, CancellationToken ct = default);
+
+    Task<RequestResponse> PostResponseAsync(string url, CancellationToken ct = default);
 
     Task<RequestResponse<TResponse>> PostResponseAsync<TResponse>(
         string url,
@@ -49,10 +43,6 @@ public interface IRequestService
         Stream destination,
         CancellationToken ct = default);
 
-    #endregion
-
-    #region PUT
-
     Task<TResponse?> PutAsync<TResponse, TBody>(string url, TBody body, CancellationToken ct = default);
 
     Task<TResponse?> PutAsync<TResponse>(string url, CancellationToken ct = default);
@@ -66,13 +56,19 @@ public interface IRequestService
         TBody body,
         CancellationToken ct = default);
 
+    Task<RequestResponse> PutResponseAsync(string url, CancellationToken ct = default);
+
     Task<RequestResponse<TResponse>> PutResponseAsync<TResponse>(
         string url,
         CancellationToken ct = default);
 
-    #endregion
+    Task<RequestResponse> PutToStreamAsync(string url, Stream destination, CancellationToken ct = default);
 
-    #region PATCH
+    Task<RequestResponse> PutToStreamAsync<TBody>(
+        string url,
+        TBody body,
+        Stream destination,
+        CancellationToken ct = default);
 
     Task<TResponse?> PatchAsync<TResponse, TBody>(string url, TBody body, CancellationToken ct = default);
 
@@ -87,13 +83,19 @@ public interface IRequestService
         TBody body,
         CancellationToken ct = default);
 
+    Task<RequestResponse> PatchResponseAsync(string url, CancellationToken ct = default);
+
     Task<RequestResponse<TResponse>> PatchResponseAsync<TResponse>(
         string url,
         CancellationToken ct = default);
 
-    #endregion
+    Task<RequestResponse> PatchToStreamAsync(string url, Stream destination, CancellationToken ct = default);
 
-    #region DELETE
+    Task<RequestResponse> PatchToStreamAsync<TBody>(
+        string url,
+        TBody body,
+        Stream destination,
+        CancellationToken ct = default);
 
     Task DeleteAsync(string url, CancellationToken ct = default);
 
@@ -103,6 +105,8 @@ public interface IRequestService
 
     Task<TResponse?> DeleteAsync<TResponse, TBody>(string url, TBody body, CancellationToken ct = default);
 
+    Task<RequestResponse> DeleteResponseAsync(string url, CancellationToken ct = default);
+
     Task<RequestResponse<T>> DeleteResponseAsync<T>(string url, CancellationToken ct = default);
 
     Task<RequestResponse<TResponse>> DeleteResponseAsync<TResponse, TBody>(
@@ -110,13 +114,7 @@ public interface IRequestService
         TBody body,
         CancellationToken ct = default);
 
-    #endregion
-
-    #region Escape hatches
-
     Task<RequestResponse> SendAsync(HttpRequestMessage request, CancellationToken ct = default);
 
     Task<RequestResponse<T>> SendAsync<T>(HttpRequestMessage request, CancellationToken ct = default);
-
-    #endregion
 }

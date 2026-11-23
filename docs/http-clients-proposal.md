@@ -33,8 +33,8 @@
   удалены до следующего ревью API.
 - Авторизация удалена из v1 полностью: нет `IApiAuthorizationProvider`, `ApiAuthorizationHandler`,
   `IApiReauthenticator`, `IApiReauthenticationHandler`, `IApiSession`.
-- `AddRequestService` выставляет `Accept` из разрешённого сериализатора для каждого клиента;
-  есть unkeyed `AddRequestService()` и типизированный `AddRequestService<TClient>()`.
+- `AddRequestService` выставляет `Accept` из разрешённого сериализатора для каждого клиента, только если
+  у клиента ещё нет `Accept`; есть unkeyed `AddRequestService()` и типизированный `AddRequestService<TClient>()`.
 - `IRequestSerializer.ContentType` (не `MediaType`); сериализаторы не проверяют media type ответа.
   JSON/MessagePack выбираются на конкретном клиенте через `ConfigureJson(...)`/`UseMessagePack()`; глобальных
   `AddJsonSerializer(...)`/`AddRequestErrorHandler(...)` нет — JSON включён по умолчанию, fallback
@@ -52,10 +52,12 @@
   (`_httpClient.SendAsync(..., HttpCompletionOption.ResponseHeadersRead, ct)`), без промежуточного
   `SendCoreAsync`; чтение — `ReadResponseAsync<T>`; `CreateRequest` создаёт запрос без тела,
   `CreateRequestWithBody<TBody>` сериализует тело, поэтому вложенного `CreateContent(body)` нет.
-- `IRequestService` содержит 34 метода: добавлены `PostResponseAsync<TResponse>`,
+- `IRequestService` содержит 43 метода: добавлены `PostResponseAsync<TResponse>`,
   `PostResponseAsync<TResponse, TBody>`, `PutResponseAsync<TResponse, TBody>`,
-  `PatchResponseAsync<TResponse, TBody>`, `DeleteResponseAsync<T>`; после аудита также body-less
-  `PutAsync`/`PatchAsync`, `DELETE` с телом и `ConfigureJson(JsonSerializerOptions)`.
+  `PatchResponseAsync<TResponse, TBody>`, `DeleteResponseAsync<T>`, `PutToStreamAsync`/`PatchToStreamAsync`,
+  body-less `PutAsync`/`PatchAsync`, `DELETE` с телом и `ConfigureJson(JsonSerializerOptions)`.
+  Body-less `*ResponseAsync(string)` объявлены в интерфейсе рядом с generic-версиями, а не в
+  extension-классе: иначе часть одной группы методов жила бы в другой сборке/namespace.
 - Тесты лежат в `tests/Mirai.Space.Extensions.Http.Tests/`; `InternalsVisibleTo` не используется:
   фабрики `RequestResponse`/`RequestException` живут в `Mirai.Space.Extensions.Http`, а Abstractions
   не ссылается на `HttpResponseMessage` (кроме escape-hatch `HttpRequestMessage` в `IRequestService`).
@@ -187,8 +189,9 @@ Mirai.Space.Extensions.Http.Json      Mirai.Space.Extensions.Http.MessagePack
   только на Abstractions и не знать про инфраструктуру;
 - Json/MessagePack зависят от контрактов через ядро, а не наоборот; ядро — единственное место,
   где живут `RequestService` и DI;
-- namespace у всех проектов остаётся единым — `Mirai.Space.Extensions.Http`, поэтому перенос
-  файлов не меняет `using` у потребителей;
+- namespace разнесены по проектам: `Mirai.Space.Extensions.Http.Abstractions` (контракты),
+  `Mirai.Space.Extensions.Http` (ядро и расширения), `.Http.Json` и `.Http.MessagePack` (сериализаторы);
+  потребителю нужны несколько `using`, зато слой Abstractions не тянет инфраструктуру;
 - преобразования — C# 14 extension-методы `response.ToRequestResponse()` / `response.ToRequestResponse(content)` /
   `response.ToRequestException(request)` в `RequestResponseExtensions` и `RequestExceptionExtensions`, живут в `Mirai.Space.Extensions.Http`;
   `RequestResponse` имеет публичный конструктор от готовых словарей заголовков, Abstractions не знает

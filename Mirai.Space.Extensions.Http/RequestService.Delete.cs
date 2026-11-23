@@ -31,6 +31,12 @@ internal sealed partial class RequestService
         return await SendContentCoreAsync<TResponse>(request, ct).ConfigureAwait(false);
     }
 
+    public async Task<RequestResponse> DeleteResponseAsync(string url, CancellationToken ct = default)
+    {
+        using var request = CreateRequest(HttpMethod.Delete, url);
+        return await SendResponseCoreAsync(request, ct).ConfigureAwait(false);
+    }
+
     public async Task<RequestResponse<T>> DeleteResponseAsync<T>(string url, CancellationToken ct = default)
     {
         using var request = CreateRequest(HttpMethod.Delete, url);

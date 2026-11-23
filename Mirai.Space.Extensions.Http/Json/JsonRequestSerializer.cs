@@ -63,7 +63,7 @@ internal sealed class JsonRequestSerializer : IRequestSerializer
         using var reader = new StreamReader(
             stream,
             Encoding.UTF8,
-            detectEncodingFromByteOrderMarks: false,
+            detectEncodingFromByteOrderMarks: true,
             bufferSize: 4096,
             leaveOpen: true);
 
@@ -87,12 +87,7 @@ internal sealed class JsonRequestSerializer : IRequestSerializer
                            .WithCancellation(ct)
                            .ConfigureAwait(false))
         {
-            if (item is null)
-            {
-                ThrowHelper.ThrowJsonException($"JSON array item is not a {typeof(T)}.");
-            }
-
-            yield return item;
+            yield return item!;
         }
     }
 

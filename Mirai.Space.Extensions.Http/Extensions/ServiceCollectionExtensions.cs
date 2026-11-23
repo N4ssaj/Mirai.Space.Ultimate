@@ -52,7 +52,6 @@ public static class ServiceCollectionExtensions
             var serializer = sp.GetKeyedService<IRequestSerializer>(key)
                 ?? sp.GetRequiredService<IRequestSerializer>();
 
-            client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue(serializer.ContentType));
         });

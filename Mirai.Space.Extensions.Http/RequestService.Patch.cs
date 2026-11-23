@@ -40,11 +40,40 @@ internal sealed partial class RequestService
         return await SendResponseCoreAsync<TResponse>(request, ct).ConfigureAwait(false);
     }
 
+    public async Task<RequestResponse> PatchResponseAsync(string url, CancellationToken ct = default)
+    {
+        using var request = CreateRequest(HttpMethod.Patch, url);
+        return await SendResponseCoreAsync(request, ct).ConfigureAwait(false);
+    }
+
     public async Task<RequestResponse<TResponse>> PatchResponseAsync<TResponse>(
         string url,
         CancellationToken ct = default)
     {
         using var request = CreateRequest(HttpMethod.Patch, url);
         return await SendResponseCoreAsync<TResponse>(request, ct).ConfigureAwait(false);
+    }
+
+    public async Task<RequestResponse> PatchToStreamAsync(
+        string url,
+        Stream destination,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+
+        using var request = CreateRequest(HttpMethod.Patch, url);
+        return await SendStreamCoreAsync(request, destination, ct).ConfigureAwait(false);
+    }
+
+    public async Task<RequestResponse> PatchToStreamAsync<TBody>(
+        string url,
+        TBody body,
+        Stream destination,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+
+        using var request = CreateRequestWithBody(HttpMethod.Patch, url, body);
+        return await SendStreamCoreAsync(request, destination, ct).ConfigureAwait(false);
     }
 }

@@ -1,7 +1,10 @@
+using System.Runtime.CompilerServices;
+
 namespace Mirai.Space.Extensions.MVVM.LifeTime;
 
 public sealed class AsyncLifeTime : LifeTime, IAsyncDisposable
 {
+    [OverloadResolutionPriority(1)]
     public void Add(IAsyncDisposable disposable)
     {
         ArgumentNullException.ThrowIfNull(disposable);
