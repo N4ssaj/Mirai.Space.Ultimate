@@ -51,7 +51,4 @@
     <Project Path="tests/Mirai.Space.Extensions.Http.Tests/Mirai.Space.Extensions.Http.Tests.csproj" />
     <Project Path="tests/Mirai.Space.Extensions.MVVM.Tests/Mirai.Space.Extensions.MVVM.Tests.csproj" />
   </Folder>
-  <Folder Name="/benchmark/">
-    <Project Path="benchmark/Mirai.Space.Extensions.ComponentModel.Benchmarks/Mirai.Space.Extensions.ComponentModel.Benchmarks.csproj" />
-  </Folder>
 </Solution>
