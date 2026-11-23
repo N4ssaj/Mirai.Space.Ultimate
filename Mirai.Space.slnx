@@ -40,14 +40,7 @@
     <Project Path="Mirai.Space.Contracts/Mirai.Space.Contracts.csproj" />
     <Project Path="Mirai.Space.Shared/Mirai.Space.Shared.csproj" />
   </Folder>
-  <Folder Name="/Experimental/">
-    <Project Path="Experimental/Mirai.Space.Extensions.Clone/Mirai.Space.Extensions.Clone.csproj" />
-    <Project Path="Experimental/Mirai.Space.Extensions.Clone.SourceGeneration/Mirai.Space.Extensions.Clone.SourceGeneration.csproj" />
-    <Project Path="Experimental/Mirai.Space.Extensions.ComponentModel/Mirai.Space.Extensions.ComponentModel.csproj" />
-  </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/Mirai.Space.Extensions.Clone.Tests/Mirai.Space.Extensions.Clone.Tests.csproj" />
-    <Project Path="tests/Mirai.Space.Extensions.ComponentModel.Tests/Mirai.Space.Extensions.ComponentModel.Tests.csproj" />
     <Project Path="tests/Mirai.Space.Extensions.Http.Tests/Mirai.Space.Extensions.Http.Tests.csproj" />
     <Project Path="tests/Mirai.Space.Extensions.MVVM.Tests/Mirai.Space.Extensions.MVVM.Tests.csproj" />
   </Folder>

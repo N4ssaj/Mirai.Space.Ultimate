@@ -2,9 +2,9 @@ namespace Mirai.Space.Extensions.MVVM.LifeTime;
 
 public class LifeTime : IDisposable
 {
-    private protected readonly List<object> Disposables = [];
-    private protected readonly Lock Gate = new();
-    private protected readonly CancellationTokenSource Cancellation = new();
+    protected readonly List<object> Disposables = [];
+    protected readonly Lock Gate = new();
+    protected readonly CancellationTokenSource Cancellation = new();
     private bool _disposed;
 
     public bool IsDisposed => Volatile.Read(ref _disposed);
@@ -20,7 +20,7 @@ public class LifeTime : IDisposable
 
     void IDisposable.Dispose() => DisposeCore();
 
-    private protected void AddCore(object disposable)
+    protected void AddCore(object disposable)
     {
         lock (Gate)
         {
@@ -30,7 +30,7 @@ public class LifeTime : IDisposable
         }
     }
 
-    private protected List<object>? BeginDispose()
+    protected List<object>? BeginDispose()
     {
         lock (Gate)
         {
@@ -45,7 +45,7 @@ public class LifeTime : IDisposable
         }
     }
 
-    private protected void DisposeCore()
+    protected void DisposeCore()
     {
         var toDispose = BeginDispose();
 

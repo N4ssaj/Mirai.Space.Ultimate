@@ -36,8 +36,9 @@ branch with an explicit `return`/`return default!`.
 protected parent. A `TypeDescriptionProvider` created without a parent therefore returns its empty
 descriptor for types it has no shape/metadata for, hiding reflection metadata. Fix: default the parent
 to `TypeDescriptor.GetProvider(typeof(object))` in the convenience constructor and keep an explicit
-`parent: null` overload for a deliberately isolated provider. Reference:
-`Experimental\Mirai.Space.Extensions.ComponentModel\Descriptors\PolyTypeTypeDescriptionProvider.cs`.
+`parent: null` overload for a deliberately isolated provider. The reference implementation
+(`Experimental\Mirai.Space.Extensions.ComponentModel\Descriptors\PolyTypeTypeDescriptionProvider.cs`)
+was deleted together with the Experimental projects; the rule stands on its own.
 
 ## 2026-11-23 | PolyType 2.0.0-rc.4 | events and methods are opt-in in shapes
 
