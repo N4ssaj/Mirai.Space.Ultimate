@@ -55,11 +55,19 @@ public interface IRequestService
 
     Task<TResponse?> PutAsync<TResponse, TBody>(string url, TBody body, CancellationToken ct = default);
 
+    Task<TResponse?> PutAsync<TResponse>(string url, CancellationToken ct = default);
+
     Task PutAsync<TBody>(string url, TBody body, CancellationToken ct = default);
+
+    Task PutAsync(string url, CancellationToken ct = default);
 
     Task<RequestResponse<TResponse>> PutResponseAsync<TResponse, TBody>(
         string url,
         TBody body,
+        CancellationToken ct = default);
+
+    Task<RequestResponse<TResponse>> PutResponseAsync<TResponse>(
+        string url,
         CancellationToken ct = default);
 
     #endregion
@@ -68,11 +76,19 @@ public interface IRequestService
 
     Task<TResponse?> PatchAsync<TResponse, TBody>(string url, TBody body, CancellationToken ct = default);
 
+    Task<TResponse?> PatchAsync<TResponse>(string url, CancellationToken ct = default);
+
     Task PatchAsync<TBody>(string url, TBody body, CancellationToken ct = default);
+
+    Task PatchAsync(string url, CancellationToken ct = default);
 
     Task<RequestResponse<TResponse>> PatchResponseAsync<TResponse, TBody>(
         string url,
         TBody body,
+        CancellationToken ct = default);
+
+    Task<RequestResponse<TResponse>> PatchResponseAsync<TResponse>(
+        string url,
         CancellationToken ct = default);
 
     #endregion
@@ -83,7 +99,16 @@ public interface IRequestService
 
     Task<T?> DeleteAsync<T>(string url, CancellationToken ct = default);
 
+    Task DeleteAsync<TBody>(string url, TBody body, CancellationToken ct = default);
+
+    Task<TResponse?> DeleteAsync<TResponse, TBody>(string url, TBody body, CancellationToken ct = default);
+
     Task<RequestResponse<T>> DeleteResponseAsync<T>(string url, CancellationToken ct = default);
+
+    Task<RequestResponse<TResponse>> DeleteResponseAsync<TResponse, TBody>(
+        string url,
+        TBody body,
+        CancellationToken ct = default);
 
     #endregion
 

@@ -7,4 +7,6 @@ public abstract class ReactiveDialog : ReactiveComponent
     public Task Completion => _completion.Task;
 
     public void Close() => _completion.TrySetResult();
+
+    protected void Cancel() => _completion.TrySetCanceled();
 }

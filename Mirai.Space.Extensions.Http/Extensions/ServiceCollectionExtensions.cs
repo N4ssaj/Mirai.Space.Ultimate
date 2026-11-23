@@ -19,32 +19,7 @@ public static class ServiceCollectionExtensions
             ArgumentNullException.ThrowIfNull(services);
 
             var name = typeof(TClient).FullName!;
-
-            services.TryAddSingleton<IRequestSerializer, JsonRequestSerializer>();
-            services.TryAddSingleton<IRequestErrorHandler, DefaultRequestErrorHandler>();
-
-            var builder = services.AddHttpClient(name);
-
-            builder.ConfigureHttpClient((sp, client) =>
-            {
-                var serializer = sp.GetKeyedService<IRequestSerializer>(name)
-                    ?? sp.GetRequiredService<IRequestSerializer>();
-
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(
-                    new MediaTypeWithQualityHeaderValue(serializer.ContentType));
-            });
-
-            services.TryAddKeyedTransient<IRequestService>(name, (sp, _) =>
-            {
-                var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(name);
-                var serializer = sp.GetKeyedService<IRequestSerializer>(name)
-                    ?? sp.GetRequiredService<IRequestSerializer>();
-                var errorHandler = sp.GetKeyedService<IRequestErrorHandler>(name)
-                    ?? sp.GetRequiredService<IRequestErrorHandler>();
-
-                return new RequestService(httpClient, serializer, errorHandler);
-            });
+            var builder = AddRequestServiceCore(services, name);
 
             services.TryAddTransient<TClient>(sp =>
                 ActivatorUtilities.CreateInstance<TClient>(
@@ -53,6 +28,55 @@ public static class ServiceCollectionExtensions
 
             return builder;
         }
+
+        public IHttpClientBuilder AddRequestService()
+        {
+            ArgumentNullException.ThrowIfNull(services);
+
+            return AddRequestServiceCore(services, null);
+        }
+    }
+
+    private static IHttpClientBuilder AddRequestServiceCore(
+        IServiceCollection services,
+        string? name)
+    {
+        services.TryAddSingleton<IRequestSerializer, JsonRequestSerializer>();
+        services.TryAddSingleton<IRequestErrorHandler, DefaultRequestErrorHandler>();
+
+        var builder = services.AddHttpClient(name ?? string.Empty);
+        var key = builder.Name;
+
+        builder.ConfigureHttpClient((sp, client) =>
+        {
+            var serializer = sp.GetKeyedService<IRequestSerializer>(key)
+                ?? sp.GetRequiredService<IRequestSerializer>();
+
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue(serializer.ContentType));
+        });
+
+        services.TryAddKeyedTransient<IRequestService>(key, (sp, _) => CreateRequestService(sp, key));
+
+        if (name is null)
+        {
+            services.TryAddTransient<IRequestService>(sp =>
+                sp.GetRequiredKeyedService<IRequestService>(key));
+        }
+
+        return builder;
+    }
+
+    private static IRequestService CreateRequestService(IServiceProvider sp, string key)
+    {
+        var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(key);
+        var serializer = sp.GetKeyedService<IRequestSerializer>(key)
+            ?? sp.GetRequiredService<IRequestSerializer>();
+        var errorHandler = sp.GetKeyedService<IRequestErrorHandler>(key)
+            ?? sp.GetRequiredService<IRequestErrorHandler>();
+
+        return new RequestService(httpClient, serializer, errorHandler);
     }
 
     extension(IHttpClientBuilder builder)
@@ -64,6 +88,14 @@ public static class ServiceCollectionExtensions
 
             var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
             configure(options);
+            return builder.UseSerializer(new JsonRequestSerializer(options));
+        }
+
+        public IHttpClientBuilder ConfigureJson(JsonSerializerOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(options);
+
             return builder.UseSerializer(new JsonRequestSerializer(options));
         }
 

@@ -29,6 +29,14 @@ services.AddRequestService<AboutRequestService>()
 `TClient` is transient, matching the `IHttpClientFactory` typed-client lifetime. Do not register the
 typed client as a singleton.
 
+The unkeyed `AddRequestService()` registers the default `IRequestService`;
+`AddRequestService<TClient>()` registers a keyed client and the typed client:
+
+```csharp
+services.AddRequestService();                 // default IRequestService
+services.AddRequestService<GitHubClient>();   // keyed IRequestService + typed client
+```
+
 The default serializer is JSON (`JsonSerializerDefaults.Web`), so a client needs no serializer call. Use the
 `ConfigureJson(...)` only to customize JSON or to pin JSON on a client whose global serializer was
 replaced:
@@ -36,10 +44,14 @@ replaced:
 ```csharp
 builder.ConfigureJson(options => options.PropertyNamingPolicy = null);
 builder.ConfigureJson(options => options.TypeInfoResolver = MyJsonContext.Default);
+builder.ConfigureJson(myPreconfiguredOptions);
 ```
 
+The `Action<JsonSerializerOptions>` overload starts from `JsonSerializerDefaults.Web`; the overload taking
+`JsonSerializerOptions` uses the supplied instance as-is.
+
 For MessagePack use `UseMessagePack()` (or `UseMessagePack(options)`); the request `Content-Type` becomes
-`application/x-msgpack` and the default `Accept` should be set to the same value.
+`application/x-msgpack` and the default `Accept` is set to the same value.
 
 Different clients can use different serializers and error handlers: keyed registrations are scoped by the
 named `HttpClient` (`ConfigureJson(options => ...)` on one builder, `UseMessagePack()` on another). The serializer
@@ -81,7 +93,7 @@ public sealed class AboutRequestService(IRequestService requests)
 ```
 
 `AboutRequestService` in `tests/Mirai.Space.Extensions.Http.Tests/About` is the reference
-implementation: it exercises all 25 `IRequestService` methods against a real ASP.NET host.
+implementation; it exercises the main `IRequestService` methods against a real ASP.NET host.
 
 ### Method groups
 
@@ -90,10 +102,16 @@ implementation: it exercises all 25 `IRequestService` methods against a real ASP
 - `PostAsync`, `PostAsync<TBody>`, `PostAsync<TResponse>`, `PostAsync<TResponse, TBody>`,
   `PostResponseAsync<TResponse>`, `PostResponseAsync<TResponse, TBody>`,
   `PostToStreamAsync`, `PostToStreamAsync<TBody>`
-- `PutAsync<TBody>`, `PutAsync<TResponse, TBody>`, `PutResponseAsync<TResponse, TBody>`
-- `PatchAsync<TBody>`, `PatchAsync<TResponse, TBody>`, `PatchResponseAsync<TResponse, TBody>`
-- `DeleteAsync`, `DeleteAsync<T>`, `DeleteResponseAsync<T>`
+- `PutAsync`, `PutAsync<TBody>`, `PutAsync<TResponse>`, `PutAsync<TResponse, TBody>`,
+  `PutResponseAsync<TResponse>`, `PutResponseAsync<TResponse, TBody>`
+- `PatchAsync`, `PatchAsync<TBody>`, `PatchAsync<TResponse>`, `PatchAsync<TResponse, TBody>`,
+  `PatchResponseAsync<TResponse>`, `PatchResponseAsync<TResponse, TBody>`
+- `DeleteAsync`, `DeleteAsync<T>`, `DeleteAsync<TBody>`, `DeleteAsync<TResponse, TBody>`,
+  `DeleteResponseAsync<T>`, `DeleteResponseAsync<TResponse, TBody>`
 - escape hatches: `SendAsync`, `SendAsync<T>`
+
+The interface exposes 34 methods: body-less `PUT`/`PATCH` and `DELETE` with a body are first-class now, not
+escape-hatch workarounds.
 
 High-level methods dispose the `HttpRequestMessage` they create. Escape hatches take a caller-owned request and
 do not dispose it: dispose it yourself after `SendAsync`/`SendAsync<T>` completes. Do not reuse a request after
@@ -138,8 +156,9 @@ catch (RequestException exception)
 }
 ```
 
-`RequestException` deliberately has no response body. ProblemDetails parsing is deferred until the rest
-of the API is settled; `RequestException` carries only the status line and request coordinates.
+`RequestException` carries the status line and request coordinates only. The error body and response
+headers are intentionally not captured; read them in a custom `DelegatingHandler` if a client needs them.
+ProblemDetails parsing is still deferred.
 
 ## Headers
 
@@ -186,6 +205,7 @@ The test project has `FrameworkReference Microsoft.AspNetCore.App`; no separate 
 ## Current limitations
 
 - No authorization/authentication pipeline yet; it was removed from v1.
-- `Accept` is not set automatically.
+- No per-request timeout parameter: `HttpClient.Timeout` is per named client, and callers can still cancel
+  through `CancellationToken`.
 - A single top-level MessagePack array cannot be streamed; use a sequence of structures.
-- ProblemDetails parsing is not implemented yet; `RequestException` has no body or problem document.
+- ProblemDetails parsing is not implemented; `RequestException` does not expose the error body.

@@ -26,13 +26,15 @@
 - Владение потоком: `StreamedApiResponse` удалён. Потоковые методы принимают `Stream destination`
   (владелец — вызывающий код), копируют тело и возвращают `RequestResponse` со статусом/заголовками;
   `HttpResponseMessage` диспозится внутри сервиса.
-- Ошибка одна: `RequestException` несёт `StatusCode`/`Method`/`RequestUri`; тела ответа в исключении
-  нет. `IRequestErrorHandler.HandleAsync(RequestException, ct)` только обрабатывает (может
-  залогировать/бросить); исключение создаёт `RequestService`. Разбор ProblemDetails отложен
+- Ошибка одна: `RequestException` несёт `StatusCode`/`Method`/`RequestUri`. Тело и заголовки ответа
+  намеренно не читаются. `IRequestErrorHandler.HandleAsync(RequestException, ct)` только обрабатывает
+  (может залогировать/бросить); исключение создаёт `RequestService`. Разбор ProblemDetails отложен
   (m02134): `RequestProblemDetails`, `IRequestProblemDetailsReader` и `AddProblemDetailsReader`
   удалены до следующего ревью API.
 - Авторизация удалена из v1 полностью: нет `IApiAuthorizationProvider`, `ApiAuthorizationHandler`,
   `IApiReauthenticator`, `IApiReauthenticationHandler`, `IApiSession`.
+- `AddRequestService` выставляет `Accept` из разрешённого сериализатора для каждого клиента;
+  есть unkeyed `AddRequestService()` и типизированный `AddRequestService<TClient>()`.
 - `IRequestSerializer.ContentType` (не `MediaType`); сериализаторы не проверяют media type ответа.
   JSON/MessagePack выбираются на конкретном клиенте через `ConfigureJson(...)`/`UseMessagePack()`; глобальных
   `AddJsonSerializer(...)`/`AddRequestErrorHandler(...)` нет — JSON включён по умолчанию, fallback
@@ -50,9 +52,10 @@
   (`_httpClient.SendAsync(..., HttpCompletionOption.ResponseHeadersRead, ct)`), без промежуточного
   `SendCoreAsync`; чтение — `ReadResponseAsync<T>`; `CreateRequest` создаёт запрос без тела,
   `CreateRequestWithBody<TBody>` сериализует тело, поэтому вложенного `CreateContent(body)` нет.
-- `IRequestService` содержит 25 методов: добавлены `PostResponseAsync<TResponse>`,
+- `IRequestService` содержит 34 метода: добавлены `PostResponseAsync<TResponse>`,
   `PostResponseAsync<TResponse, TBody>`, `PutResponseAsync<TResponse, TBody>`,
-  `PatchResponseAsync<TResponse, TBody>`, `DeleteResponseAsync<T>`.
+  `PatchResponseAsync<TResponse, TBody>`, `DeleteResponseAsync<T>`; после аудита также body-less
+  `PutAsync`/`PatchAsync`, `DELETE` с телом и `ConfigureJson(JsonSerializerOptions)`.
 - Тесты лежат в `tests/Mirai.Space.Extensions.Http.Tests/`; `InternalsVisibleTo` не используется:
   фабрики `RequestResponse`/`RequestException` живут в `Mirai.Space.Extensions.Http`, а Abstractions
   не ссылается на `HttpResponseMessage` (кроме escape-hatch `HttpRequestMessage` в `IRequestService`).
@@ -110,7 +113,7 @@
    `serializer.MediaType`. Причина: один сериализатор может отдавать разные media type позже
    (см. `application/x-msgpack` c LZ4), а `Content-Type` — часть HTTP-запроса, а не сериализации.
 4. **`MediaType` остаётся** (в отличие от первого раунда): это единственное место, где ядро узнаёт,
-   чем помечать тело. `Accept` по умолчанию **не** выставляется — это конфигурация именованного клиента.
+   чем помечать тело. `Accept` выставляется из сериализатора при регистрации клиента.
 5. **Никакого `object` в телах**: `PostAsync<TResponse, TBody>(url, TBody body)` — два generic-параметра
    выбраны явно вызывающим (`PostAsync<AuthModel, LoginModel>(...)`), ибо частичная подстановка типов
    в C# запрещена. Это осознанная цена за типизированное тело.
