@@ -35,8 +35,6 @@ public static class ServiceCollectionExtensions
             ArgumentNullException.ThrowIfNull(services);
 
             services.AddTransient(typeof(Lazy<>), typeof(LazyResolved<>));
-            services.AddSingleton(typeof(Lazy<>), typeof(LazyResolved<>));
-            services.AddScoped(typeof(Lazy<>), typeof(LazyResolved<>));
 
             return services;
         }
