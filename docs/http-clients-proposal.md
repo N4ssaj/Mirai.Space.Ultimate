@@ -27,24 +27,34 @@
   (владелец — вызывающий код), копируют тело и возвращают `RequestResponse` со статусом/заголовками;
   `HttpResponseMessage` диспозится внутри сервиса.
 - Ошибка одна: `RequestException` несёт `StatusCode`/`Method`/`RequestUri`. Тело и заголовки ответа
-  намеренно не читаются. `IRequestErrorHandler.HandleAsync(RequestException, ct)` только обрабатывает
-  (может залогировать/бросить); исключение создаёт `RequestService`. Разбор ProblemDetails отложен
-  (m02134): `RequestProblemDetails`, `IRequestProblemDetailsReader` и `AddProblemDetailsReader`
-  удалены до следующего ревью API.
+  по умолчанию не читаются. `IRequestErrorHandler.HandleAsync(HttpResponseMessage, ct)` получает сырой
+  ответ, может разобрать тело/ProblemDetails и бросить свой `RequestException` или доменное исключение;
+  если он вернулся, `RequestService` бросает стандартный `RequestException` — подавить ошибку нельзя.
+  Разбор ProblemDetails встроенно отложен: `RequestProblemDetails`,
+  `IRequestProblemDetailsReader` и `AddProblemDetailsReader` удалены до следующего ревью API.
 - Авторизация удалена из v1 полностью: нет `IApiAuthorizationProvider`, `ApiAuthorizationHandler`,
   `IApiReauthenticator`, `IApiReauthenticationHandler`, `IApiSession`.
-- `AddRequestService` выставляет `Accept` из разрешённого сериализатора для каждого клиента, только если
-  у клиента ещё нет `Accept`; есть unkeyed `AddRequestService()` и типизированный `AddRequestService<TClient>()`.
+- `AddRequestService` не выставляет `Accept` автоматически: заголовок задаёт вызывающий код или `ConfigureHttpClient`
+  (ранее он выставлялся из сериализатора, но `Content-Type` — формат тела запроса, а не ответа). Есть unkeyed
+  `AddRequestService()`, именованный `AddRequestService(string name)` и типизированные
+  `AddRequestService<TClient>()` / `AddRequestService<TClient>(string name)`. Параметрический typed-вариант
+  использует `typeof(TClient).FullName` как ключ, именованный — переданное имя.
+- Стриминговые методы (`GetToStreamAsync`, `PostToStreamAsync`, `PutToStreamAsync`, `PatchToStreamAsync`,
+  `DeleteToStreamAsync`, `GetAsyncEnumerable`) всегда используют `HttpCompletionOption.ResponseHeadersRead`;
+  `RequestServiceOptions.CompletionOption` действует только на буферизованные вызовы. `DeleteToStreamAsync`
+  добавлен для симметрии; `HeadAsync`/`OptionsAsync` переименованы в `HeadResponseAsync`/`OptionsResponseAsync`.
+- MessagePack `Content-Type` — `application/msgpack` (не `application/x-msgpack`).
 - `IRequestSerializer.ContentType` (не `MediaType`); сериализаторы не проверяют media type ответа.
   JSON/MessagePack выбираются на конкретном клиенте через `ConfigureJson(...)`/`UseMessagePack()`; глобальных
   `AddJsonSerializer(...)`/`AddRequestErrorHandler(...)` нет — JSON включён по умолчанию, fallback
-  заменяется прямой регистрацией `IRequestSerializer`/`IRequestErrorHandler` в DI. `UseSerializer<TSerializer>()`/
-  `UseSerializer(instance)` остаётся общим хуком для кастомного сериализатора; `ConfigureJson`/`UseMessagePack` —
+  заменяется прямой регистрацией `IRequestSerializer`/`IRequestErrorHandler` в DI. `UseSerializer<TSerializer>()`
+  остаётся общим хуком для кастомного сериализатора; `ConfigureJson`/`UseMessagePack` —
   удобные обёртки над ним. Отдельного глобального `AddMessagePackSerializer()` нет: MessagePack всегда
   opt-in на конкретном клиенте.
 - DI: один `ServiceCollectionExtensions` на сборку (extension-блоки для `IServiceCollection`
-  и `IHttpClientBuilder`); `AddRequestService<TClient>()` возвращает `IHttpClientBuilder`, регистрирует
-  keyed `IRequestService` и transient `TClient`. `AddHttpExtensions` удалён.
+  и `IHttpClientBuilder`); `AddRequestService<TClient>()` и `AddRequestService<TClient>(string name)`
+  возвращают `IHttpClientBuilder`, регистрируют keyed `IRequestService` и transient `TClient`.
+  `AddHttpExtensions` удалён.
 - `IRequestService` содержит только транспорт: `CreateContent<TBody>`, `SendAsync`,
   `SendAsync<T>`, `SendToStreamAsync`, `SendAsyncEnumerable<T>`. Все высокоуровневые методы
   (`GetAsync`, `PostResponseAsync`, `PutToStreamAsync` и т. д.) — extension-методы
@@ -517,7 +527,7 @@ public static class RequestServiceCollectionExtensions
 
 public static class RequestServiceBuilderExtensions
 {
-    /// <summary>Переопределить сериализатор для конкретного клиента (экземпляр из DI, singleton).</summary>
+    /// <summary>Переопределить сериализатор для конкретного клиента (transient-экземпляр из DI).</summary>
     public static IHttpClientBuilder UseSerializer<TSerializer>(this IHttpClientBuilder builder)
         where TSerializer : class, IRequestSerializer;
 
@@ -647,8 +657,8 @@ var created = await requests.SendAsync<FileModel>(upload, ct);
 | `IHttpClientFactory` / именованный `HttpClient` | синглтон / на фабрике | стандарт: ротация хендлеров, DNS |
 | `TClient` (доменный сервис) | **transient** | иначе «поймает» один `HttpClient` навсегда; дешёвый объект |
 | `RequestService` | **transient** | держит `HttpClient`; создаётся в фабрике `TClient` |
-| `IRequestSerializer` | **singleton** (keyed по имени клиента) | иммутабельный (опции заморожены/скопированы при регистрации); дешёвая регистрация |
-| `IApiErrorHandler` | **singleton** (keyed или глобальный) | должен быть stateless; если нужны scoped-зависимости — per-client override через `UseErrorHandler<T>` и **не** singleton |
+| `IRequestSerializer` | **transient** (keyed по имени клиента) | дешёвый stateless-объект; `ConfigureJson`/`UseMessagePack` регистрируют настройки в DI, сериализатор разрешается оттуда |
+| `IRequestErrorHandler` | **transient** (keyed) | получает ответ на ошибку, не хранит состояние между запросами; экземпляр живёт вместе с `RequestService` |
 | `IApiSession` | **singleton** | одно состояние авторизации на процесс |
 | `DelegatingHandler` | transient (регистрирует `AddHttpMessageHandler`) | требование `IHttpClientFactory` |
 | `IApiReauthenticator` | зависит от app (UI-поток → transient/scoped) | показывает окно |
@@ -1087,7 +1097,7 @@ JSON/MessagePack и сетевого I/O шум; (г) владение `HttpResp
 | Риск | Снятие |
 |---|---|
 | `ActivatorUtilities` не находит конструктор `TClient` | правило: `TClient` — `sealed class` с одним публичным конструктором `(IRequestService …)`; тест DI на эталонном сервисе |
-| Двойная регистрация `TClient`/сериализатора | `TryAddTransient` для `TClient`, `TryAddKeyedSingleton` для serializer/handler (первая регистрация выигрывает) — задокументировать |
+| Двойная регистрация `TClient`/сериализатора | `TryAddTransient` для `TClient`, `TryAddKeyedTransient` для serializer/observer (первая регистрация выигрывает) — задокументировать |
 | Забытый `ConfigureJson` → клиент без сериализатора | явный `InvalidOperationException` с именем клиента и подсказкой («вызовите ConfigureJson/AddJsonSerializer») |
 | Стриминг и retry-политики несовместимы | в README и в примерах: для SSE/stream — без retry, `Timeout.InfiniteTimeSpan` |
 | SSE-клиент «висит» при недоступном сервере | `ConnectTimeout`/`AttemptTimeout` в resilience или отдельный `HttpClient.Timeout` для не-SSE части |

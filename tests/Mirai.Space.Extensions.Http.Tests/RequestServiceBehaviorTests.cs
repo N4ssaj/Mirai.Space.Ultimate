@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.DependencyInjection;
 using Mirai.Space.Extensions.Http.Abstractions;
 using Mirai.Space.Extensions.Http.Extensions;
 using Xunit;
@@ -57,29 +58,43 @@ public sealed class RequestServiceBehaviorTests
     [Fact]
     public async Task GetAsync_NonSuccess_InvokesErrorHandlerAndThrows()
     {
-        var handler = new CapturingErrorHandler();
+        CapturingErrorHandler.Reset();
         using var host = TestHost.Create(
             _ => TestResponses.Empty(HttpStatusCode.InternalServerError),
-            builder => builder.UseErrorHandler(handler));
+            builder => builder.UseErrorHandler<CapturingErrorHandler>());
 
         var exception = await Assert.ThrowsAsync<RequestException>(() =>
             host.Client.Requests.GetAsync<TestModel>(
                 ResourceUrl, TestContext.Current.CancellationToken));
 
         Assert.Equal(HttpStatusCode.InternalServerError, exception.StatusCode);
-        Assert.Equal(1, handler.Calls);
+        Assert.Equal(1, CapturingErrorHandler.Calls);
     }
 
     [Fact]
-    public async Task GetAsync_NonSuccess_ErrorHandlerExceptionReplacesRequestException()
+    public async Task GetAsync_NonSuccess_HandlerExceptionPropagates()
     {
         using var host = TestHost.Create(
             _ => TestResponses.Empty(HttpStatusCode.BadGateway),
-            builder => builder.UseErrorHandler(new ThrowingErrorHandler()));
+            builder => builder.UseErrorHandler<ThrowingErrorHandler>());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             host.Client.Requests.GetAsync<TestModel>(
                 ResourceUrl, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetAsync_NonSuccess_HandlerCanThrowCustomRequestException()
+    {
+        using var host = TestHost.Create(
+            _ => TestResponses.Empty(HttpStatusCode.BadRequest),
+            builder => builder.UseErrorHandler<CustomErrorHandler>());
+
+        var exception = await Assert.ThrowsAsync<RequestException>(() =>
+            host.Client.Requests.GetAsync<TestModel>(
+                ResourceUrl, TestContext.Current.CancellationToken));
+
+        Assert.Equal("custom failure", exception.Message);
     }
 
     [Fact]
@@ -156,19 +171,33 @@ public sealed class RequestServiceBehaviorTests
 
     private sealed class CapturingErrorHandler : IRequestErrorHandler
     {
-        public int Calls { get; private set; }
+        private static int _calls;
 
-        public ValueTask HandleAsync(RequestException exception, CancellationToken ct = default)
+        public static int Calls => Volatile.Read(ref _calls);
+
+        public static void Reset() => Volatile.Write(ref _calls, 0);
+
+        public ValueTask HandleAsync(HttpResponseMessage response, CancellationToken ct = default)
         {
-            Calls++;
+            Interlocked.Increment(ref _calls);
             return ValueTask.CompletedTask;
         }
     }
 
     private sealed class ThrowingErrorHandler : IRequestErrorHandler
     {
-        public ValueTask HandleAsync(RequestException exception, CancellationToken ct = default) =>
+        public ValueTask HandleAsync(HttpResponseMessage response, CancellationToken ct = default) =>
             throw new InvalidOperationException("handler failure");
+    }
+
+    private sealed class CustomErrorHandler : IRequestErrorHandler
+    {
+        public ValueTask HandleAsync(HttpResponseMessage response, CancellationToken ct = default) =>
+            throw new RequestException(
+                "custom failure",
+                response.StatusCode,
+                response.RequestMessage?.Method,
+                response.RequestMessage?.RequestUri);
     }
 
     private sealed class TrackingContent(byte[] bytes) : ByteArrayContent(bytes)

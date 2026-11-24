@@ -12,11 +12,10 @@ public static partial class RequestServiceExtensions
             await requests.SendAsync(request, ct).ConfigureAwait(false);
         }
 
-        public async Task<T?> DeleteAsync<T>(string url, CancellationToken ct = default)
+        public async Task<TResponse?> DeleteAsync<TResponse>(string url, CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Delete, url);
-            var response = await requests.SendAsync<T>(request, ct).ConfigureAwait(false);
-            return response.Content;
+            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task DeleteAsync<TBody>(string url, TBody body, CancellationToken ct = default)
@@ -31,22 +30,21 @@ public static partial class RequestServiceExtensions
             CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Delete, url, requests.CreateContent(body));
-            var response = await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
-            return response.Content;
+            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task<RequestResponse> DeleteResponseAsync(string url, CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Delete, url);
-            return await requests.SendAsync(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync(request, ct).ConfigureAwait(false);
         }
 
-        public async Task<RequestResponse<T>> DeleteResponseAsync<T>(
+        public async Task<RequestResponse<TResponse>> DeleteResponseAsync<TResponse>(
             string url,
             CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Delete, url);
-            return await requests.SendAsync<T>(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task<RequestResponse<TResponse>> DeleteResponseAsync<TResponse, TBody>(
@@ -55,7 +53,26 @@ public static partial class RequestServiceExtensions
             CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Delete, url, requests.CreateContent(body));
-            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync<TResponse>(request, ct).ConfigureAwait(false);
+        }
+
+        public async Task<RequestResponse> DeleteToStreamAsync(
+            string url,
+            Stream destination,
+            CancellationToken ct = default)
+        {
+            using var request = CreateRequest(HttpMethod.Delete, url);
+            return await requests.SendToStreamAsync(request, destination, ct).ConfigureAwait(false);
+        }
+
+        public async Task<RequestResponse> DeleteToStreamAsync<TBody>(
+            string url,
+            TBody body,
+            Stream destination,
+            CancellationToken ct = default)
+        {
+            using var request = CreateRequest(HttpMethod.Delete, url, requests.CreateContent(body));
+            return await requests.SendToStreamAsync(request, destination, ct).ConfigureAwait(false);
         }
     }
 }

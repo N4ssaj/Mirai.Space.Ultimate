@@ -1,5 +1,6 @@
 using MessagePack;
 using Microsoft.Extensions.DependencyInjection;
+using Mirai.Space.Extensions.Http.Abstractions;
 using Mirai.Space.Extensions.Http.Extensions;
 
 namespace Mirai.Space.Extensions.Http.MessagePack.Extensions;
@@ -12,15 +13,7 @@ public static class ServiceCollectionExtensions
         {
             ArgumentNullException.ThrowIfNull(builder);
 
-            return builder.UseMessagePack(MessagePackSerializerOptions.Standard);
-        }
-
-        public IHttpClientBuilder UseMessagePack(MessagePackSerializerOptions options)
-        {
-            ArgumentNullException.ThrowIfNull(builder);
-            ArgumentNullException.ThrowIfNull(options);
-
-            return builder.UseSerializer(new MessagePackRequestSerializer(options));
+            return builder.UseMessagePack(static _ => MessagePackSerializerOptions.Standard);
         }
 
         public IHttpClientBuilder UseMessagePack(
@@ -29,7 +22,14 @@ public static class ServiceCollectionExtensions
             ArgumentNullException.ThrowIfNull(builder);
             ArgumentNullException.ThrowIfNull(configure);
 
-            return builder.UseMessagePack(configure(MessagePackSerializerOptions.Standard));
+            var options = configure(MessagePackSerializerOptions.Standard);
+            ArgumentNullException.ThrowIfNull(options);
+
+            builder.Services.AddKeyedTransient<IRequestSerializer>(
+                builder.Name,
+                (_, _) => new MessagePackRequestSerializer(options));
+
+            return builder;
         }
     }
 }

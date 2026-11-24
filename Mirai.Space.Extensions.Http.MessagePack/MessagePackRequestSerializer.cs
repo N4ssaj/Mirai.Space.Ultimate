@@ -8,7 +8,7 @@ internal sealed class MessagePackRequestSerializer : IRequestSerializer
 {
     private readonly MessagePackSerializerOptions _options;
 
-    public string ContentType => "application/x-msgpack";
+    public string ContentType => "application/msgpack";
 
     public MessagePackRequestSerializer(MessagePackSerializerOptions options)
     {
@@ -23,7 +23,7 @@ internal sealed class MessagePackRequestSerializer : IRequestSerializer
 
     public async IAsyncEnumerable<T> DeserializeAsyncEnumerable<T>(
         Stream stream,
-        string? contentType,
+        string? mediaType,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         using var reader = new MessagePackStreamReader(stream, leaveOpen: true);

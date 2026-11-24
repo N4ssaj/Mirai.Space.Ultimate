@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using MessagePack;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -12,7 +12,7 @@ namespace Mirai.Space.Extensions.Http.Tests.About;
 internal sealed class AboutTestServer : IAsyncDisposable
 {
     private const string StreamPayload = "about-stream";
-    private const string MessagePackContentType = "application/x-msgpack";
+    private const string MessagePackContentType = "application/msgpack";
 
     private readonly WebApplication _app;
 

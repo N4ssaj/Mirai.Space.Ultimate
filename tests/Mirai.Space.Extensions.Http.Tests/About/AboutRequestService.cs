@@ -1,4 +1,4 @@
-using Mirai.Space.Extensions.Http.Abstractions;
+﻿using Mirai.Space.Extensions.Http.Abstractions;
 
 namespace Mirai.Space.Extensions.Http.Tests.About;
 
@@ -15,16 +15,16 @@ public sealed class AboutRequestService(IRequestService requests)
         requests.GetResponseAsync<AboutInfo>(Resource, ct);
 
     public Task<RequestResponse> DownloadAboutAsync(Stream destination, CancellationToken ct = default) =>
-        requests.DownloadAsync(StreamResource, destination, ct);
+        requests.GetToStreamAsync(StreamResource, destination, ct);
 
     public IAsyncEnumerable<string> GetTagsAsync(CancellationToken ct = default) =>
         requests.GetAsyncEnumerable<string>(TagsResource, ct);
 
     public Task<RequestResponse> HeadAboutAsync(CancellationToken ct = default) =>
-        requests.HeadAsync(Resource, ct);
+        requests.HeadResponseAsync(Resource, ct);
 
     public Task<RequestResponse> OptionsAboutAsync(CancellationToken ct = default) =>
-        requests.OptionsAsync(Resource, ct);
+        requests.OptionsResponseAsync(Resource, ct);
 
     public Task<TResponse?> CreateAboutAsync<TResponse>(CancellationToken ct = default) =>
         requests.PostAsync<TResponse>(Resource, ct);
@@ -88,10 +88,10 @@ public sealed class AboutRequestService(IRequestService requests)
         requests.DeleteResponseAsync<AboutInfo>(Resource, ct);
 
     public Task<RequestResponse> SendAsync(HttpRequestMessage request, CancellationToken ct = default) =>
-        requests.SendAsync(request, ct);
+        requests.SendResponseAsync(request, ct);
 
     public Task<RequestResponse<T>> SendAsync<T>(HttpRequestMessage request, CancellationToken ct = default) =>
-        requests.SendAsync<T>(request, ct);
+        requests.SendResponseAsync<T>(request, ct);
 
     public Task<RequestResponse> SendToStreamAsync(
         HttpRequestMessage request,

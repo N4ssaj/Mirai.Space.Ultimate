@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using MessagePack;
 using Microsoft.Extensions.DependencyInjection;
 using Mirai.Space.Extensions.Http.Abstractions;
@@ -69,7 +69,7 @@ public sealed class RequestServiceStreamingTests
         var body = SerializeMsgPack(
             new MessagePackModel { Id = 1, Name = "a" },
             new MessagePackModel { Id = 2, Name = "b" });
-        using var host = TestHost.Create(_ => TestResponses.Bytes(body, "application/x-msgpack"),
+        using var host = TestHost.Create(_ => TestResponses.Bytes(body, "application/msgpack"),
             builder => builder.UseMessagePack());
 
         var items = await ReadAllAsync(host.Client.Requests.GetAsyncEnumerable<MessagePackModel>(
@@ -85,7 +85,7 @@ public sealed class RequestServiceStreamingTests
             .Concat(SerializeMsgPack(new MessagePackModel { Id = 1, Name = "a" }))
             .Concat(SerializeMsgPack(new MessagePackModel { Id = 2, Name = "b" }))
             .ToArray();
-        using var host = TestHost.Create(_ => TestResponses.Bytes(body, "application/x-msgpack"),
+        using var host = TestHost.Create(_ => TestResponses.Bytes(body, "application/msgpack"),
             builder => builder.UseMessagePack());
 
         await Assert.ThrowsAsync<MessagePackSerializationException>(async () =>

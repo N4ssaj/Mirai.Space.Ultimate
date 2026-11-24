@@ -12,15 +12,13 @@ public static partial class RequestServiceExtensions
             CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Patch, url, requests.CreateContent(body));
-            var response = await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
-            return response.Content;
+            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task<TResponse?> PatchAsync<TResponse>(string url, CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Patch, url);
-            var response = await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
-            return response.Content;
+            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task PatchAsync<TBody>(string url, TBody body, CancellationToken ct = default)
@@ -41,13 +39,13 @@ public static partial class RequestServiceExtensions
             CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Patch, url, requests.CreateContent(body));
-            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task<RequestResponse> PatchResponseAsync(string url, CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Patch, url);
-            return await requests.SendAsync(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync(request, ct).ConfigureAwait(false);
         }
 
         public async Task<RequestResponse<TResponse>> PatchResponseAsync<TResponse>(
@@ -55,7 +53,7 @@ public static partial class RequestServiceExtensions
             CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Patch, url);
-            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task<RequestResponse> PatchToStreamAsync(

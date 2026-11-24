@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Mirai.Space.Extensions.Http.Abstractions;
 using Xunit;
 
@@ -9,7 +9,7 @@ public sealed class RequestServiceHeadOptionsTests
     private const string ResourceUrl = "http://localhost/about";
 
     [Fact]
-    public async Task HeadAsync_SendsHeadRequestAndReturnsHeaders()
+    public async Task HeadResponseAsync_SendsHeadRequestAndReturnsHeaders()
     {
         using var host = TestHost.Create(_ =>
         {
@@ -18,7 +18,7 @@ public sealed class RequestServiceHeadOptionsTests
             return response;
         });
 
-        var response = await host.Client.Requests.HeadAsync(
+        var response = await host.Client.Requests.HeadResponseAsync(
             ResourceUrl, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -27,7 +27,7 @@ public sealed class RequestServiceHeadOptionsTests
     }
 
     [Fact]
-    public async Task OptionsAsync_SendsOptionsRequestAndReturnsContentHeaders()
+    public async Task OptionsResponseAsync_SendsOptionsRequestAndReturnsContentHeaders()
     {
         using var host = TestHost.Create(_ =>
         {
@@ -38,7 +38,7 @@ public sealed class RequestServiceHeadOptionsTests
             return response;
         });
 
-        var response = await host.Client.Requests.OptionsAsync(
+        var response = await host.Client.Requests.OptionsResponseAsync(
             ResourceUrl, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -48,11 +48,11 @@ public sealed class RequestServiceHeadOptionsTests
     }
 
     [Fact]
-    public async Task OptionsAsync_EmptyResponse_DoesNotThrow()
+    public async Task OptionsResponseAsync_EmptyResponse_DoesNotThrow()
     {
         using var host = TestHost.Create(_ => TestResponses.Empty());
 
-        var response = await host.Client.Requests.OptionsAsync(
+        var response = await host.Client.Requests.OptionsResponseAsync(
             ResourceUrl, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -60,12 +60,12 @@ public sealed class RequestServiceHeadOptionsTests
     }
 
     [Fact]
-    public async Task HeadAsync_NonSuccess_ThrowsRequestException()
+    public async Task HeadResponseAsync_NonSuccess_ThrowsRequestException()
     {
         using var host = TestHost.Create(_ => TestResponses.Empty(HttpStatusCode.MethodNotAllowed));
 
         var exception = await Assert.ThrowsAsync<RequestException>(() =>
-            host.Client.Requests.HeadAsync(
+            host.Client.Requests.HeadResponseAsync(
                 ResourceUrl, TestContext.Current.CancellationToken));
 
         Assert.Equal(HttpStatusCode.MethodNotAllowed, exception.StatusCode);

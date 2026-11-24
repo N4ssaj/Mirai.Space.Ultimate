@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
@@ -444,18 +444,18 @@ public sealed class AboutRequestServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         await using var server = await AboutTestServer.StartAsync(ct);
-        var handler = new CapturingErrorHandler();
         var services = new ServiceCollection();
         services.AddRequestService<AboutRequestService>()
             .ConfigureHttpClient(client => client.BaseAddress = new Uri(server.BaseAddress))
-            .UseErrorHandler(handler);
+            .UseErrorHandler<CapturingErrorHandler>();
         using var provider = services.BuildServiceProvider();
         var about = provider.GetRequiredService<AboutRequestService>();
+        CapturingErrorHandler.Reset();
 
         await Assert.ThrowsAsync<RequestException>(() =>
             about.SendAsync(new HttpRequestMessage(HttpMethod.Get, "about/missing"), ct));
 
-        Assert.Equal(1, handler.Calls);
+        Assert.Equal(1, CapturingErrorHandler.Calls);
     }
 
     [Fact]
@@ -497,17 +497,21 @@ public sealed class AboutRequestServiceTests
     }
 
     private static string ContentType(string format) =>
-        format == "json" ? "application/json" : "application/x-msgpack";
+        format == "json" ? "application/json" : "application/msgpack";
 
     private sealed class CapturingErrorHandler : IRequestErrorHandler
     {
-        public int Calls { get; private set; }
+        private static int _calls;
+
+        public static int Calls => Volatile.Read(ref _calls);
+
+        public static void Reset() => Volatile.Write(ref _calls, 0);
 
         public ValueTask HandleAsync(
-            RequestException exception,
+            HttpResponseMessage response,
             CancellationToken ct = default)
         {
-            Calls++;
+            Interlocked.Increment(ref _calls);
             return ValueTask.CompletedTask;
         }
     }

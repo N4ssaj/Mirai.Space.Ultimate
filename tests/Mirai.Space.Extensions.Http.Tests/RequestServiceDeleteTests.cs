@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using Xunit;
 
 namespace Mirai.Space.Extensions.Http.Tests;
@@ -45,5 +46,37 @@ public sealed class RequestServiceDeleteTests
         Assert.NotNull(response.Content);
         Assert.Equal("deleted", response.Content.Name);
         Assert.Equal(HttpMethod.Delete, Assert.Single(host.Handler.Requests).Method);
+    }
+
+    [Fact]
+    public async Task DeleteToStreamAsync_CopiesBodyAndLeavesDestinationOpen()
+    {
+        using var host = TestHost.Create(_ => TestResponses.Text("deleted-body", "text/plain"));
+        using var destination = new MemoryStream();
+
+        var response = await host.Client.Requests.DeleteToStreamAsync(
+            ResourceUrl, destination, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("deleted-body", Encoding.UTF8.GetString(destination.ToArray()));
+        Assert.True(destination.CanRead);
+        Assert.Null(Assert.Single(host.Handler.Requests).Content);
+    }
+
+    [Fact]
+    public async Task DeleteToStreamAsyncWithBody_SendsBodyAndCopiesResponse()
+    {
+        using var host = TestHost.Create(_ => TestResponses.Text("deleted-body", "text/plain"));
+        using var destination = new MemoryStream();
+
+        await host.Client.Requests.DeleteToStreamAsync(
+            ResourceUrl, new TestModel(1, "value"), destination,
+            TestContext.Current.CancellationToken);
+
+        var request = Assert.Single(host.Handler.Requests);
+        Assert.Equal(HttpMethod.Delete, request.Method);
+        Assert.NotNull(request.Content);
+        Assert.Equal("application/json", request.ContentType);
+        Assert.Equal("deleted-body", Encoding.UTF8.GetString(destination.ToArray()));
     }
 }

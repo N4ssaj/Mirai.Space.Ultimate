@@ -16,15 +16,15 @@ internal sealed class RequestService : IRequestService
         HttpClient httpClient,
         IRequestSerializer serializer,
         IRequestErrorHandler errorHandler,
-        RequestServiceOptions? options = null)
+        RequestServiceOptions options)
     {
         _httpClient = httpClient;
         _serializer = serializer;
         _errorHandler = errorHandler;
-        _options = options ?? new RequestServiceOptions();
+        _options = options;
     }
 
-    public async Task<RequestResponse> SendAsync(
+    public async Task<RequestResponse> SendResponseAsync(
         HttpRequestMessage message,
         CancellationToken ct = default)
     {
@@ -39,7 +39,7 @@ internal sealed class RequestService : IRequestService
         return response.ToRequestResponse();
     }
 
-    public async Task<RequestResponse<T>> SendAsync<T>(
+    public async Task<RequestResponse<TResponse>> SendResponseAsync<TResponse>(
         HttpRequestMessage message,
         CancellationToken ct = default)
     {
@@ -51,9 +51,37 @@ internal sealed class RequestService : IRequestService
 
         await ValidateResponseAsync(response, message, ct).ConfigureAwait(false);
 
-        var content = await ReadResponseAsync<T>(response, ct).ConfigureAwait(false);
+        var content = await ReadResponseAsync<TResponse>(response, ct).ConfigureAwait(false);
 
         return response.ToRequestResponse(content);
+    }
+
+    public async Task SendAsync(
+        HttpRequestMessage message,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        using var response = await _httpClient
+            .SendAsync(message, _options.CompletionOption, ct)
+            .ConfigureAwait(false);
+
+        await ValidateResponseAsync(response, message, ct).ConfigureAwait(false);
+    }
+
+    public async Task<TResponse?> SendAsync<TResponse>(
+        HttpRequestMessage message,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        using var response = await _httpClient
+            .SendAsync(message, _options.CompletionOption, ct)
+            .ConfigureAwait(false);
+
+        await ValidateResponseAsync(response, message, ct).ConfigureAwait(false);
+
+        return await ReadResponseAsync<TResponse>(response, ct).ConfigureAwait(false);
     }
 
     public async Task<RequestResponse> SendToStreamAsync(
@@ -65,7 +93,7 @@ internal sealed class RequestService : IRequestService
         ArgumentNullException.ThrowIfNull(destination);
 
         using var response = await _httpClient
-            .SendAsync(message, _options.CompletionOption, ct)
+            .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, ct)
             .ConfigureAwait(false);
 
         await ValidateResponseAsync(response, message, ct).ConfigureAwait(false);
@@ -97,16 +125,16 @@ internal sealed class RequestService : IRequestService
         [EnumeratorCancellation] CancellationToken ct)
     {
         using var response = await _httpClient
-            .SendAsync(message, _options.CompletionOption, ct)
+            .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, ct)
             .ConfigureAwait(false);
 
         await ValidateResponseAsync(response, message, ct).ConfigureAwait(false);
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-        var contentType = response.Content.Headers.ContentType?.MediaType;
+        var mediaType = response.Content.Headers.ContentType?.MediaType;
 
         await foreach (var item in _serializer
-                           .DeserializeAsyncEnumerable<T>(stream, contentType, ct)
+                           .DeserializeAsyncEnumerable<T>(stream, mediaType, ct)
                            .WithCancellation(ct)
                            .ConfigureAwait(false))
         {
@@ -124,9 +152,8 @@ internal sealed class RequestService : IRequestService
             return;
         }
 
-        var exception = response.ToRequestException(request);
-        await _errorHandler.HandleAsync(exception, ct).ConfigureAwait(false);
-        throw exception;
+        await _errorHandler.HandleAsync(response, ct).ConfigureAwait(false);
+        throw response.ToRequestException(request);
     }
 
     private async ValueTask<T?> ReadResponseAsync<T>(HttpResponseMessage response, CancellationToken ct)

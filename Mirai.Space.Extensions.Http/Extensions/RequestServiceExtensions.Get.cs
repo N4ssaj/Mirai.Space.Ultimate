@@ -6,26 +6,27 @@ public static partial class RequestServiceExtensions
 {
     extension(IRequestService requests)
     {
-        public async Task<T?> GetAsync<T>(string url, CancellationToken ct = default)
+        public async Task<TResponse?> GetAsync<TResponse>(string url, CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Get, url);
-            var response = await requests.SendAsync<T>(request, ct).ConfigureAwait(false);
-            return response.Content;
+            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task<RequestResponse> GetResponseAsync(string url, CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Get, url);
-            return await requests.SendAsync(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync(request, ct).ConfigureAwait(false);
         }
 
-        public async Task<RequestResponse<T>> GetResponseAsync<T>(string url, CancellationToken ct = default)
+        public async Task<RequestResponse<TResponse>> GetResponseAsync<TResponse>(
+            string url,
+            CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Get, url);
-            return await requests.SendAsync<T>(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
-        public async Task<RequestResponse> DownloadAsync(
+        public async Task<RequestResponse> GetToStreamAsync(
             string url,
             Stream destination,
             CancellationToken ct = default)

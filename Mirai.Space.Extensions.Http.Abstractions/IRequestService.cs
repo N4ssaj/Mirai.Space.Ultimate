@@ -4,9 +4,15 @@ public interface IRequestService
 {
     HttpContent CreateContent<TBody>(TBody body);
 
-    Task<RequestResponse> SendAsync(HttpRequestMessage request, CancellationToken ct = default);
+    Task SendAsync(HttpRequestMessage request, CancellationToken ct = default);
 
-    Task<RequestResponse<T>> SendAsync<T>(HttpRequestMessage request, CancellationToken ct = default);
+    Task<TResponse?> SendAsync<TResponse>(HttpRequestMessage request, CancellationToken ct = default);
+
+    Task<RequestResponse> SendResponseAsync(HttpRequestMessage request, CancellationToken ct = default);
+
+    Task<RequestResponse<TResponse>> SendResponseAsync<TResponse>(
+        HttpRequestMessage request,
+        CancellationToken ct = default);
 
     Task<RequestResponse> SendToStreamAsync(
         HttpRequestMessage request,

@@ -4,14 +4,12 @@ public interface IRequestSerializer
 {
     string ContentType { get; }
 
-    string AcceptMediaType => ContentType;
-
     ReadOnlyMemory<byte> Serialize<T>(T value);
 
     ValueTask<T?> DeserializeAsync<T>(Stream stream, CancellationToken ct = default);
 
     IAsyncEnumerable<T> DeserializeAsyncEnumerable<T>(
         Stream stream,
-        string? contentType,
+        string? mediaType,
         CancellationToken ct = default);
 }

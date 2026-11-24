@@ -6,11 +6,10 @@ public static partial class RequestServiceExtensions
 {
     extension(IRequestService requests)
     {
-        public async Task<T?> PostAsync<T>(string url, CancellationToken ct = default)
+        public async Task<TResponse?> PostAsync<TResponse>(string url, CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Post, url);
-            var response = await requests.SendAsync<T>(request, ct).ConfigureAwait(false);
-            return response.Content;
+            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task<TResponse?> PostAsync<TResponse, TBody>(
@@ -19,8 +18,7 @@ public static partial class RequestServiceExtensions
             CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Post, url, requests.CreateContent(body));
-            var response = await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
-            return response.Content;
+            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task PostAsync(string url, CancellationToken ct = default)
@@ -38,7 +36,7 @@ public static partial class RequestServiceExtensions
         public async Task<RequestResponse> PostResponseAsync(string url, CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Post, url);
-            return await requests.SendAsync(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync(request, ct).ConfigureAwait(false);
         }
 
         public async Task<RequestResponse<TResponse>> PostResponseAsync<TResponse>(
@@ -46,7 +44,7 @@ public static partial class RequestServiceExtensions
             CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Post, url);
-            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task<RequestResponse<TResponse>> PostResponseAsync<TResponse, TBody>(
@@ -55,7 +53,7 @@ public static partial class RequestServiceExtensions
             CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Post, url, requests.CreateContent(body));
-            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task<RequestResponse> PostToStreamAsync(

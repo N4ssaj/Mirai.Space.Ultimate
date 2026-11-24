@@ -14,7 +14,7 @@ public sealed class RequestServiceSendTests
         using var host = TestHost.Create(_ => TestResponses.Json("""{"id":1,"name":"sent"}"""));
         using var request = new HttpRequestMessage(HttpMethod.Get, ResourceUrl);
 
-        var response = await host.Client.Requests.SendAsync(
+        var response = await host.Client.Requests.SendResponseAsync(
             request, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -27,7 +27,7 @@ public sealed class RequestServiceSendTests
         using var host = TestHost.Create(_ => TestResponses.Json("""{"id":2,"name":"sent"}"""));
         using var request = new HttpRequestMessage(HttpMethod.Get, ResourceUrl);
 
-        var response = await host.Client.Requests.SendAsync<TestModel>(
+        var response = await host.Client.Requests.SendResponseAsync<TestModel>(
             request, TestContext.Current.CancellationToken);
 
         Assert.NotNull(response.Content);
@@ -42,7 +42,7 @@ public sealed class RequestServiceSendTests
         using var request = new HttpRequestMessage(HttpMethod.Get, ResourceUrl);
 
         var exception = await Assert.ThrowsAsync<RequestException>(() =>
-            host.Client.Requests.SendAsync(request, TestContext.Current.CancellationToken));
+            host.Client.Requests.SendResponseAsync(request, TestContext.Current.CancellationToken));
 
         Assert.Equal(HttpStatusCode.BadRequest, exception.StatusCode);
         Assert.Equal(HttpMethod.Get, exception.Method);

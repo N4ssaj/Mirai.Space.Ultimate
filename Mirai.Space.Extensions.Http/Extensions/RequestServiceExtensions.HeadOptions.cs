@@ -6,16 +6,16 @@ public static partial class RequestServiceExtensions
 {
     extension(IRequestService requests)
     {
-        public async Task<RequestResponse> HeadAsync(string url, CancellationToken ct = default)
+        public async Task<RequestResponse> HeadResponseAsync(string url, CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Head, url);
-            return await requests.SendAsync(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync(request, ct).ConfigureAwait(false);
         }
 
-        public async Task<RequestResponse> OptionsAsync(string url, CancellationToken ct = default)
+        public async Task<RequestResponse> OptionsResponseAsync(string url, CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Options, url);
-            return await requests.SendAsync(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync(request, ct).ConfigureAwait(false);
         }
     }
 }

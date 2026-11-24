@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using Mirai.Space.Extensions.Http.Abstractions;
@@ -74,12 +74,12 @@ public sealed class RequestServiceGetTests
     }
 
     [Fact]
-    public async Task DownloadAsync_CopiesBodyIntoDestinationAndLeavesItOpen()
+    public async Task GetToStreamAsync_CopiesBodyIntoDestinationAndLeavesItOpen()
     {
         using var host = TestHost.Create(_ => TestResponses.Text("stream-body", "text/plain"));
         using var destination = new MemoryStream();
 
-        var response = await host.Client.Requests.DownloadAsync(
+        var response = await host.Client.Requests.GetToStreamAsync(
             "http://localhost/stream", destination, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -88,12 +88,12 @@ public sealed class RequestServiceGetTests
     }
 
     [Fact]
-    public async Task DownloadAsync_NullDestination_ThrowsArgumentNullException()
+    public async Task GetToStreamAsync_NullDestination_ThrowsArgumentNullException()
     {
         using var host = TestHost.Create(_ => TestResponses.Empty());
 
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            host.Client.Requests.DownloadAsync(
+            host.Client.Requests.GetToStreamAsync(
                 "http://localhost/stream", null!, TestContext.Current.CancellationToken));
     }
 

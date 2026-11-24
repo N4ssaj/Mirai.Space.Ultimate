@@ -16,7 +16,14 @@ public class RequestResponse
         IReadOnlyDictionary<string, IReadOnlyList<string>> contentHeaders)
     {
         StatusCode = statusCode;
-        Headers = headers;
-        ContentHeaders = contentHeaders;
+        Headers = Snapshot(headers);
+        ContentHeaders = Snapshot(contentHeaders);
     }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> Snapshot(
+        IReadOnlyDictionary<string, IReadOnlyList<string>> headers) =>
+        headers.ToDictionary(
+            header => header.Key,
+            header => (IReadOnlyList<string>)header.Value.ToArray(),
+            StringComparer.OrdinalIgnoreCase);
 }

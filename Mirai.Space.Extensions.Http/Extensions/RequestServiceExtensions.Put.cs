@@ -12,15 +12,13 @@ public static partial class RequestServiceExtensions
             CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Put, url, requests.CreateContent(body));
-            var response = await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
-            return response.Content;
+            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task<TResponse?> PutAsync<TResponse>(string url, CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Put, url);
-            var response = await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
-            return response.Content;
+            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task PutAsync<TBody>(string url, TBody body, CancellationToken ct = default)
@@ -41,13 +39,13 @@ public static partial class RequestServiceExtensions
             CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Put, url, requests.CreateContent(body));
-            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task<RequestResponse> PutResponseAsync(string url, CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Put, url);
-            return await requests.SendAsync(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync(request, ct).ConfigureAwait(false);
         }
 
         public async Task<RequestResponse<TResponse>> PutResponseAsync<TResponse>(
@@ -55,7 +53,7 @@ public static partial class RequestServiceExtensions
             CancellationToken ct = default)
         {
             using var request = CreateRequest(HttpMethod.Put, url);
-            return await requests.SendAsync<TResponse>(request, ct).ConfigureAwait(false);
+            return await requests.SendResponseAsync<TResponse>(request, ct).ConfigureAwait(false);
         }
 
         public async Task<RequestResponse> PutToStreamAsync(

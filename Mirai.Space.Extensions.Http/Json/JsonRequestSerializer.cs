@@ -27,9 +27,9 @@ internal sealed class JsonRequestSerializer : IRequestSerializer
 
     public IAsyncEnumerable<T> DeserializeAsyncEnumerable<T>(
         Stream stream,
-        string? contentType,
+        string? mediaType,
         CancellationToken ct = default) =>
-        GetFormat(contentType) switch
+        GetFormat(mediaType) switch
         {
             StreamFormat.ServerSentEvents => ReadServerSentEventsAsync<T>(stream, ct),
             StreamFormat.NdJson => ReadNdJsonAsync<T>(stream, ct),
@@ -69,7 +69,13 @@ internal sealed class JsonRequestSerializer : IRequestSerializer
                 continue;
             }
 
-            yield return DeserializeRequired<T>(line, $"NDJSON line is not a {typeof(T)}.");
+            var item = JsonSerializer.Deserialize<T>(line, _options);
+            if (item is null)
+            {
+                continue;
+            }
+
+            yield return item;
         }
     }
 
@@ -82,7 +88,12 @@ internal sealed class JsonRequestSerializer : IRequestSerializer
                            .WithCancellation(ct)
                            .ConfigureAwait(false))
         {
-            yield return item!;
+            if (item is null)
+            {
+                continue;
+            }
+
+            yield return item;
         }
     }
 
@@ -97,25 +108,14 @@ internal sealed class JsonRequestSerializer : IRequestSerializer
         return value;
     }
 
-    private T DeserializeRequired<T>(string json, string message)
+    private static StreamFormat GetFormat(string? mediaType)
     {
-        var value = JsonSerializer.Deserialize<T>(json, _options);
-        if (value is null)
-        {
-            ThrowHelper.ThrowJsonException(message);
-        }
-
-        return value;
-    }
-
-    private static StreamFormat GetFormat(string? contentType)
-    {
-        if (string.Equals(contentType, EventStreamContentType, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(mediaType, EventStreamContentType, StringComparison.OrdinalIgnoreCase))
         {
             return StreamFormat.ServerSentEvents;
         }
 
-        if (IsNdJson(contentType))
+        if (IsNdJson(mediaType))
         {
             return StreamFormat.NdJson;
         }
@@ -123,10 +123,10 @@ internal sealed class JsonRequestSerializer : IRequestSerializer
         return StreamFormat.JsonArray;
     }
 
-    private static bool IsNdJson(string? contentType) =>
-        string.Equals(contentType, "application/x-ndjson", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(contentType, "application/jsonl", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(contentType, "application/x-jsonlines", StringComparison.OrdinalIgnoreCase);
+    private static bool IsNdJson(string? mediaType) =>
+        string.Equals(mediaType, "application/x-ndjson", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(mediaType, "application/jsonl", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(mediaType, "application/x-jsonlines", StringComparison.OrdinalIgnoreCase);
 
     private enum StreamFormat
     {

@@ -4,6 +4,6 @@ namespace Mirai.Space.Extensions.Http;
 
 internal sealed class DefaultRequestErrorHandler : IRequestErrorHandler
 {
-    public ValueTask HandleAsync(RequestException exception, CancellationToken ct = default) =>
+    public ValueTask HandleAsync(HttpResponseMessage response, CancellationToken ct = default) =>
         ValueTask.CompletedTask;
 }

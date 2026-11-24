@@ -1,9 +1,7 @@
 using System;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Mirai.Space.Extensions.Http.Abstractions;
-using Mirai.Space.Extensions.Http.Json;
 
 namespace Mirai.Space.Extensions.Http.Extensions;
 
@@ -25,17 +23,8 @@ public static class HttpClientBuilderExtensions
             ArgumentNullException.ThrowIfNull(builder);
             ArgumentNullException.ThrowIfNull(configure);
 
-            var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-            configure(options);
-            return builder.UseSerializer(new JsonRequestSerializer(options));
-        }
-
-        public IHttpClientBuilder ConfigureJson(JsonSerializerOptions options)
-        {
-            ArgumentNullException.ThrowIfNull(builder);
-            ArgumentNullException.ThrowIfNull(options);
-
-            return builder.UseSerializer(new JsonRequestSerializer(options));
+            builder.Services.Configure<JsonSerializerOptions>(builder.Name, configure);
+            return builder;
         }
 
         public IHttpClientBuilder UseSerializer<TSerializer>()
@@ -43,16 +32,7 @@ public static class HttpClientBuilderExtensions
         {
             ArgumentNullException.ThrowIfNull(builder);
 
-            builder.Services.TryAddKeyedSingleton<IRequestSerializer, TSerializer>(builder.Name);
-            return builder;
-        }
-
-        public IHttpClientBuilder UseSerializer(IRequestSerializer serializer)
-        {
-            ArgumentNullException.ThrowIfNull(builder);
-            ArgumentNullException.ThrowIfNull(serializer);
-
-            builder.Services.TryAddKeyedSingleton(builder.Name, serializer);
+            builder.Services.AddKeyedTransient<IRequestSerializer, TSerializer>(builder.Name);
             return builder;
         }
 
@@ -61,17 +41,9 @@ public static class HttpClientBuilderExtensions
         {
             ArgumentNullException.ThrowIfNull(builder);
 
-            builder.Services.TryAddKeyedSingleton<IRequestErrorHandler, THandler>(builder.Name);
-            return builder;
-        }
-
-        public IHttpClientBuilder UseErrorHandler(IRequestErrorHandler errorHandler)
-        {
-            ArgumentNullException.ThrowIfNull(builder);
-            ArgumentNullException.ThrowIfNull(errorHandler);
-
-            builder.Services.TryAddKeyedSingleton(builder.Name, errorHandler);
+            builder.Services.AddKeyedTransient<IRequestErrorHandler, THandler>(builder.Name);
             return builder;
         }
     }
+
 }

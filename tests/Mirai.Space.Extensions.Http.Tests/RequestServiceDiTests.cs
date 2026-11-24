@@ -63,15 +63,14 @@ public sealed class RequestServiceDiTests
     }
 
     [Fact]
-    public void ConfigureJson_SetsAcceptHeader()
+    public void AddRequestService_DoesNotSetAcceptHeader()
     {
         using var host = TestHost.Create(_ => TestResponses.Empty());
 
         var client = host.GetRequiredService<IHttpClientFactory>()
             .CreateClient(typeof(TestClient).FullName!);
 
-        var accept = Assert.Single(client.DefaultRequestHeaders.Accept);
-        Assert.Equal("application/json", accept.MediaType);
+        Assert.Empty(client.DefaultRequestHeaders.Accept);
     }
 
     [Fact]
@@ -85,39 +84,11 @@ public sealed class RequestServiceDiTests
             ResourceUrl, new MessagePackModel { Id = 1, Name = "value" },
             TestContext.Current.CancellationToken);
 
-        Assert.Equal("application/x-msgpack", host.Handler.Requests[^1].ContentType);
+        Assert.Equal("application/msgpack", host.Handler.Requests[^1].ContentType);
         Assert.Equal(
-            "application/x-msgpack",
+            "application/msgpack",
             host.Services.GetRequiredKeyedService<IRequestSerializer>(
                 typeof(TestClient).FullName!).ContentType);
-    }
-
-    [Fact]
-    public void UseMessagePack_SetsAcceptHeader()
-    {
-        using var host = TestHost.Create(
-            _ => TestResponses.Empty(),
-            builder => builder.UseMessagePack());
-
-        var client = host.GetRequiredService<IHttpClientFactory>()
-            .CreateClient(typeof(TestClient).FullName!);
-
-        var accept = Assert.Single(client.DefaultRequestHeaders.Accept);
-        Assert.Equal("application/x-msgpack", accept.MediaType);
-    }
-
-    [Fact]
-    public void UseSerializer_Instance_SetsAcceptHeader()
-    {
-        using var host = TestHost.Create(
-            _ => TestResponses.Empty(),
-            builder => builder.UseSerializer(new CustomSerializer()));
-
-        var client = host.GetRequiredService<IHttpClientFactory>()
-            .CreateClient(typeof(TestClient).FullName!);
-
-        var accept = Assert.Single(client.DefaultRequestHeaders.Accept);
-        Assert.Equal(CustomSerializer.MediaType, accept.MediaType);
     }
 
     [Fact]
@@ -125,7 +96,7 @@ public sealed class RequestServiceDiTests
     {
         using var host = TestHost.Create(
             _ => TestResponses.Empty(),
-            builder => builder.UseSerializer(new CustomSerializer()));
+            builder => builder.UseSerializer<CustomSerializer>());
 
         await host.Client.Requests.PostAsync(
             ResourceUrl, new TestModel(1, "value"), TestContext.Current.CancellationToken);
@@ -158,7 +129,7 @@ public sealed class RequestServiceDiTests
             TestContext.Current.CancellationToken);
 
         Assert.Equal("application/json", handler.Requests[0].ContentType);
-        Assert.Equal("application/x-msgpack", handler.Requests[1].ContentType);
+        Assert.Equal("application/msgpack", handler.Requests[1].ContentType);
     }
 
     [Fact]
@@ -173,8 +144,12 @@ public sealed class RequestServiceDiTests
         Assert.Single(services, descriptor =>
             descriptor.ServiceType == typeof(IRequestService) &&
             Equals(descriptor.ServiceKey, typeof(TestClient).FullName));
-        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IRequestSerializer));
-        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IRequestErrorHandler));
+        Assert.Single(services, descriptor =>
+            descriptor.ServiceType == typeof(IRequestSerializer) &&
+            Equals(descriptor.ServiceKey, typeof(TestClient).FullName));
+        Assert.Single(services, descriptor =>
+            descriptor.ServiceType == typeof(IRequestErrorHandler) &&
+            Equals(descriptor.ServiceKey, typeof(TestClient).FullName));
     }
 
     [Fact]
@@ -193,8 +168,8 @@ public sealed class RequestServiceDiTests
             builder => builder.ConfigureRequestService(
                 options => options.CompletionOption = HttpCompletionOption.ResponseContentRead));
 
-        var options = host.GetRequiredService<IOptionsMonitor<RequestServiceOptions>>()
-            .Get(typeof(TestClient).FullName!);
+        var options = host.GetRequiredService<IOptionsFactory<RequestServiceOptions>>()
+            .Create(typeof(TestClient).FullName!);
 
         Assert.Equal(HttpCompletionOption.ResponseContentRead, options.CompletionOption);
     }
