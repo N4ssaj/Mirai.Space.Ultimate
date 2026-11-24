@@ -5,73 +5,70 @@ using Mirai.Space.Extensions.Http.Abstractions;
 
 namespace Mirai.Space.Extensions.Http;
 
-internal sealed partial class RequestService : IRequestService
+internal sealed class RequestService : IRequestService
 {
     private readonly HttpClient _httpClient;
     private readonly IRequestSerializer _serializer;
     private readonly IRequestErrorHandler _errorHandler;
+    private readonly RequestServiceOptions _options;
 
     internal RequestService(
         HttpClient httpClient,
         IRequestSerializer serializer,
-        IRequestErrorHandler errorHandler)
+        IRequestErrorHandler errorHandler,
+        RequestServiceOptions? options = null)
     {
         _httpClient = httpClient;
         _serializer = serializer;
         _errorHandler = errorHandler;
+        _options = options ?? new RequestServiceOptions();
     }
 
-    private async Task<RequestResponse> SendResponseCoreAsync(
-        HttpRequestMessage request,
-        CancellationToken ct)
+    public async Task<RequestResponse> SendAsync(
+        HttpRequestMessage message,
+        CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(message);
+
         using var response = await _httpClient
-            .SendAsync(request, HttpCompletionOption.ResponseContentRead, ct)
+            .SendAsync(message, _options.CompletionOption, ct)
             .ConfigureAwait(false);
 
-        await ValidateResponseAsync(response, request, ct).ConfigureAwait(false);
+        await ValidateResponseAsync(response, message, ct).ConfigureAwait(false);
 
         return response.ToRequestResponse();
     }
 
-    private async Task<RequestResponse<T>> SendResponseCoreAsync<T>(
-        HttpRequestMessage request,
-        CancellationToken ct)
+    public async Task<RequestResponse<T>> SendAsync<T>(
+        HttpRequestMessage message,
+        CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(message);
+
         using var response = await _httpClient
-            .SendAsync(request, HttpCompletionOption.ResponseContentRead, ct)
+            .SendAsync(message, _options.CompletionOption, ct)
             .ConfigureAwait(false);
 
-        await ValidateResponseAsync(response, request, ct).ConfigureAwait(false);
+        await ValidateResponseAsync(response, message, ct).ConfigureAwait(false);
 
         var content = await ReadResponseAsync<T>(response, ct).ConfigureAwait(false);
 
         return response.ToRequestResponse(content);
     }
 
-    private async Task<T?> SendContentCoreAsync<T>(
-        HttpRequestMessage request,
-        CancellationToken ct)
-    {
-        using var response = await _httpClient
-            .SendAsync(request, HttpCompletionOption.ResponseContentRead, ct)
-            .ConfigureAwait(false);
-
-        await ValidateResponseAsync(response, request, ct).ConfigureAwait(false);
-
-        return await ReadResponseAsync<T>(response, ct).ConfigureAwait(false);
-    }
-
-    private async Task<RequestResponse> SendStreamCoreAsync(
-        HttpRequestMessage request,
+    public async Task<RequestResponse> SendToStreamAsync(
+        HttpRequestMessage message,
         Stream destination,
-        CancellationToken ct)
+        CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(destination);
+
         using var response = await _httpClient
-            .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct)
+            .SendAsync(message, _options.CompletionOption, ct)
             .ConfigureAwait(false);
 
-        await ValidateResponseAsync(response, request, ct).ConfigureAwait(false);
+        await ValidateResponseAsync(response, message, ct).ConfigureAwait(false);
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
         await stream.CopyToAsync(destination, ct).ConfigureAwait(false);
@@ -79,15 +76,31 @@ internal sealed partial class RequestService : IRequestService
         return response.ToRequestResponse();
     }
 
-    private async IAsyncEnumerable<T> SendAsyncEnumerableCoreAsync<T>(
-        HttpRequestMessage request,
+    public IAsyncEnumerable<T> SendAsyncEnumerable<T>(
+        HttpRequestMessage message,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        return SendAsyncEnumerableIterator<T>(message, ct);
+    }
+
+    public HttpContent CreateContent<TBody>(TBody body)
+    {
+        var content = new ReadOnlyMemoryContent(_serializer.Serialize(body));
+        content.Headers.ContentType = new MediaTypeHeaderValue(_serializer.ContentType);
+        return content;
+    }
+
+    private async IAsyncEnumerable<T> SendAsyncEnumerableIterator<T>(
+        HttpRequestMessage message,
         [EnumeratorCancellation] CancellationToken ct)
     {
         using var response = await _httpClient
-            .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct)
+            .SendAsync(message, _options.CompletionOption, ct)
             .ConfigureAwait(false);
 
-        await ValidateResponseAsync(response, request, ct).ConfigureAwait(false);
+        await ValidateResponseAsync(response, message, ct).ConfigureAwait(false);
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
         var contentType = response.Content.Headers.ContentType?.MediaType;
@@ -135,24 +148,5 @@ internal sealed partial class RequestService : IRequestService
         }
 
         return await _serializer.DeserializeAsync<T>(stream, ct).ConfigureAwait(false);
-    }
-
-    private static HttpRequestMessage CreateRequest(
-        HttpMethod method,
-        string url)
-    {
-        ArgumentNullException.ThrowIfNull(url);
-        return new(method, url);
-    }
-
-    private HttpRequestMessage CreateRequestWithBody<TBody>(HttpMethod method, string url, TBody body)
-    {
-        var content = new ReadOnlyMemoryContent(_serializer.Serialize(body));
-        content.Headers.ContentType = new MediaTypeHeaderValue(_serializer.ContentType);
-
-        var request = CreateRequest(method, url);
-        request.Content = content;
-
-        return request;
     }
 }

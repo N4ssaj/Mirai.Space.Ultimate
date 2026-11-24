@@ -45,19 +45,18 @@
 - DI: один `ServiceCollectionExtensions` на сборку (extension-блоки для `IServiceCollection`
   и `IHttpClientBuilder`); `AddRequestService<TClient>()` возвращает `IHttpClientBuilder`, регистрирует
   keyed `IRequestService` и transient `TClient`. `AddHttpExtensions` удалён.
-- `RequestService` разбит на partial-файлы по глаголам: `Get`, `Head`, `Options`, `Post`, `Put`,
-  `Patch`, `Delete`, `Send`; флага `disposeRequest` нет — высокоуровневые методы диспозят свой
-  request, escape hatches оставляют `HttpRequestMessage` вызывающему. `using var request = ...` стоит
-  в публичном методе, рядом с объявлением запроса, а не в core; сырая отправка инлайнится
-  (`_httpClient.SendAsync(..., HttpCompletionOption.ResponseHeadersRead, ct)`), без промежуточного
-  `SendCoreAsync`; чтение — `ReadResponseAsync<T>`; `CreateRequest` создаёт запрос без тела,
-  `CreateRequestWithBody<TBody>` сериализует тело, поэтому вложенного `CreateContent(body)` нет.
-- `IRequestService` содержит 43 метода: добавлены `PostResponseAsync<TResponse>`,
-  `PostResponseAsync<TResponse, TBody>`, `PutResponseAsync<TResponse, TBody>`,
-  `PatchResponseAsync<TResponse, TBody>`, `DeleteResponseAsync<T>`, `PutToStreamAsync`/`PatchToStreamAsync`,
-  body-less `PutAsync`/`PatchAsync`, `DELETE` с телом и `ConfigureJson(JsonSerializerOptions)`.
-  Body-less `*ResponseAsync(string)` объявлены в интерфейсе рядом с generic-версиями, а не в
-  extension-классе: иначе часть одной группы методов жила бы в другой сборке/namespace.
+- `IRequestService` содержит только транспорт: `CreateContent<TBody>`, `SendAsync`,
+  `SendAsync<T>`, `SendToStreamAsync`, `SendAsyncEnumerable<T>`. Все высокоуровневые методы
+  (`GetAsync`, `PostResponseAsync`, `PutToStreamAsync` и т. д.) — extension-методы
+  `RequestServiceExtensions` в `Mirai.Space.Extensions.Http`. Extension создаёт
+  `HttpRequestMessage`, ставит `Content = requests.CreateContent(body)` и диспозит request через
+  `using`; escape hatches оставляют request вызывающему. Это убирает 40+ методов из интерфейса и
+  оставляет сериализатор внутри реализации.
+- `RequestService` — один файл `RequestService.cs`: публичные raw-методы, `ValidateResponseAsync`,
+  `ReadResponseAsync<T>` и `CreateContent<TBody>`. Отдельного `RequestService.Send.cs` и слоя
+  `*CoreAsync` больше нет: публичные методы сразу содержат всю логику, итератор enumerable
+  остаётся приватным, чтобы `null`-guard срабатывал eagerly. `CreateContent<TBody>` — единственная
+  точка сериализации тела.
 - Тесты лежат в `tests/Mirai.Space.Extensions.Http.Tests/`; `InternalsVisibleTo` не используется:
   фабрики `RequestResponse`/`RequestException` живут в `Mirai.Space.Extensions.Http`, а Abstractions
   не ссылается на `HttpResponseMessage` (кроме escape-hatch `HttpRequestMessage` в `IRequestService`).

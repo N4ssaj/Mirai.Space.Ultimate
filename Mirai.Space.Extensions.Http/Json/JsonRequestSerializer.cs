@@ -14,11 +14,6 @@ internal sealed class JsonRequestSerializer : IRequestSerializer
 
     public string ContentType => "application/json";
 
-    public JsonRequestSerializer()
-        : this(new JsonSerializerOptions(JsonSerializerDefaults.Web))
-    {
-    }
-
     public JsonRequestSerializer(JsonSerializerOptions options)
     {
         _options = options;

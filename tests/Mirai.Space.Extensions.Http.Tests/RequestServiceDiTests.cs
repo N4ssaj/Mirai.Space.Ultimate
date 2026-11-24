@@ -1,6 +1,8 @@
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Mirai.Space.Extensions.Http.Abstractions;
 using Mirai.Space.Extensions.Http.Extensions;
 using Mirai.Space.Extensions.Http.MessagePack.Extensions;
@@ -173,6 +175,28 @@ public sealed class RequestServiceDiTests
             Equals(descriptor.ServiceKey, typeof(TestClient).FullName));
         Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IRequestSerializer));
         Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IRequestErrorHandler));
+    }
+
+    [Fact]
+    public void RequestServiceOptions_DefaultToHeadersRead()
+    {
+        var options = new RequestServiceOptions();
+
+        Assert.Equal(HttpCompletionOption.ResponseHeadersRead, options.CompletionOption);
+    }
+
+    [Fact]
+    public void ConfigureRequestService_SetsCompletionOption()
+    {
+        using var host = TestHost.Create(
+            _ => TestResponses.Empty(),
+            builder => builder.ConfigureRequestService(
+                options => options.CompletionOption = HttpCompletionOption.ResponseContentRead));
+
+        var options = host.GetRequiredService<IOptionsMonitor<RequestServiceOptions>>()
+            .Get(typeof(TestClient).FullName!);
+
+        Assert.Equal(HttpCompletionOption.ResponseContentRead, options.CompletionOption);
     }
 
     private sealed class CustomSerializer : IRequestSerializer

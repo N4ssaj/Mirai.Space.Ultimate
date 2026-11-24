@@ -10,19 +10,9 @@ internal sealed class MessagePackRequestSerializer : IRequestSerializer
 
     public string ContentType => "application/x-msgpack";
 
-    public MessagePackRequestSerializer()
-        : this(MessagePackSerializerOptions.Standard)
-    {
-    }
-
     public MessagePackRequestSerializer(MessagePackSerializerOptions options)
     {
         _options = options;
-    }
-
-    public MessagePackRequestSerializer(IFormatterResolver resolver)
-        : this(MessagePackSerializerOptions.Standard.WithResolver(resolver))
-    {
     }
 
     public ReadOnlyMemory<byte> Serialize<T>(T value) =>

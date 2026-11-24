@@ -8,7 +8,7 @@ Design rationale and open questions live in [http-clients-proposal.md](http-clie
 | Project | Contains |
 | --- | --- |
 | `Mirai.Space.Extensions.Http.Abstractions` | `IRequestService`, `IRequestSerializer`, `IRequestErrorHandler`, `RequestResponse`, `RequestException` |
-| `Mirai.Space.Extensions.Http` | `RequestService` (internal), `JsonRequestSerializer`, `DefaultRequestErrorHandler`, DI extensions |
+| `Mirai.Space.Extensions.Http` | `RequestService` (internal), `RequestServiceExtensions`, `JsonRequestSerializer`, `DefaultRequestErrorHandler`, DI extensions |
 | `Mirai.Space.Extensions.Http.MessagePack` | `MessagePackRequestSerializer`, `UseMessagePack()` |
 
 JSON is part of the base package and is the default serializer. Contracts are public; implementations are
@@ -28,6 +28,38 @@ services.AddRequestService<AboutRequestService>()
 `ConfigurePrimaryHttpMessageHandler`, `AddHttpMessageHandler`, and resilience handlers compose normally.
 `TClient` is transient, matching the `IHttpClientFactory` typed-client lifetime. Do not register the
 typed client as a singleton.
+
+### Response completion
+
+By default `AddRequestService` uses `HttpCompletionOption.ResponseHeadersRead`: `SendAsync` completes as soon
+as headers arrive and the body is read from the network stream. A non-streaming `GetAsync<T>`/`SendAsync<T>`
+still materializes the whole `T` (for a `List<T>` that means the whole list), but it does not additionally
+buffer the whole body in memory. For very large collections use `GetAsyncEnumerable<T>`/`SendAsyncEnumerable<T>`
+so elements are consumed one by one.
+
+Per client:
+
+```csharp
+services.AddRequestService<BigResponseClient>()
+    .ConfigureRequestService(options =>
+    {
+        options.CompletionOption = HttpCompletionOption.ResponseHeadersRead;
+    });
+
+// or after AddRequestService:
+builder.ConfigureRequestService(options =>
+{
+    options.CompletionOption = HttpCompletionOption.ResponseContentRead;
+});
+```
+
+`ResponseContentRead` makes `HttpClient` buffer the body before `SendAsync` returns, which is useful for
+small responses but doubles memory for large ones. The option applies to every send, including the
+streaming methods (`DownloadAsync`, `PostToStreamAsync`, `GetAsyncEnumerable`): with `ResponseContentRead`
+they buffer the whole body before copying/enumerating, so keep the default `ResponseHeadersRead` for them.
+
+With `ResponseHeadersRead`, `HttpClient.Timeout` covers only the headers; body reads are bounded by the
+`CancellationToken` passed to the request.
 
 The unkeyed `AddRequestService()` registers the default `IRequestService`;
 `AddRequestService<TClient>()` registers a keyed client and the typed client:
@@ -93,7 +125,7 @@ public sealed class AboutRequestService(IRequestService requests)
 ```
 
 `AboutRequestService` in `tests/Mirai.Space.Extensions.Http.Tests/About` is the reference
-implementation; it exercises the main `IRequestService` methods against a real ASP.NET host.
+implementation; it exercises the main `RequestServiceExtensions` methods against a real ASP.NET host.
 
 ### Method groups
 
@@ -112,13 +144,14 @@ implementation; it exercises the main `IRequestService` methods against a real A
   `DeleteResponseAsync`, `DeleteResponseAsync<T>`, `DeleteResponseAsync<TResponse, TBody>`
 - escape hatches: `SendAsync`, `SendAsync<T>`
 
-The interface exposes 43 methods: body-less `PUT`/`PATCH` and `DELETE` with a body are first-class now, not
-escape-hatch workarounds. The body-less `*ResponseAsync(string)` methods return `RequestResponse` and live in
-the interface alongside their generic counterparts, so the same `IRequestService` covers both shapes.
+`IRequestService` itself is intentionally small: `CreateContent<TBody>`, `SendAsync`, `SendAsync<T>`,
+`SendToStreamAsync`, `SendAsyncEnumerable<T>`. Every high-level method above is an extension method in
+`Mirai.Space.Extensions.Http` (`RequestServiceExtensions`), so the consuming file needs
+`using Mirai.Space.Extensions.Http;` (the same namespace as the DI registration).
 
-High-level methods dispose the `HttpRequestMessage` they create. Escape hatches take a caller-owned request and
-do not dispose it: dispose it yourself after `SendAsync`/`SendAsync<T>` completes. Do not reuse a request after
-passing it to `IRequestService`.
+The extensions create and dispose their own `HttpRequestMessage`. The escape hatches take a caller-owned
+request and never dispose it: dispose it yourself after `SendAsync`/`SendAsync<T>`/`SendToStreamAsync` completes.
+Do not reuse a request after passing it to `IRequestService`.
 
 ## Streaming
 
@@ -209,7 +242,7 @@ The test project has `FrameworkReference Microsoft.AspNetCore.App`; no separate 
 ## Current limitations
 
 - No authorization/authentication pipeline yet; it was removed from v1.
-- No per-request timeout parameter: `HttpClient.Timeout` is per named client, and callers can still cancel
-  through `CancellationToken`.
+- No per-request timeout parameter: `HttpClient.Timeout` is per named client, and with the default
+  `ResponseHeadersRead` it covers only the headers; cancel body reads through `CancellationToken`.
 - A single top-level MessagePack array cannot be streamed; use a sequence of structures.
 - ProblemDetails parsing is not implemented; `RequestException` does not expose the error body.

@@ -92,4 +92,15 @@ public sealed class AboutRequestService(IRequestService requests)
 
     public Task<RequestResponse<T>> SendAsync<T>(HttpRequestMessage request, CancellationToken ct = default) =>
         requests.SendAsync<T>(request, ct);
+
+    public Task<RequestResponse> SendToStreamAsync(
+        HttpRequestMessage request,
+        Stream destination,
+        CancellationToken ct = default) =>
+        requests.SendToStreamAsync(request, destination, ct);
+
+    public IAsyncEnumerable<T> SendAsyncEnumerable<T>(
+        HttpRequestMessage request,
+        CancellationToken ct = default) =>
+        requests.SendAsyncEnumerable<T>(request, ct);
 }
